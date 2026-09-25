@@ -1,0 +1,15 @@
+﻿# Personal library data (the app creates this on first run)
+data/*
+!data/.gitkeep
+
+# Backups, scratch and generated media
+*.tgz
+_to_delete/
+brag-output*/
+Claude outputs/
+__pycache__/
+*.pyc
+*.log
+
+# Flutter generated
+mobile/**/flutter/ephemeral/
