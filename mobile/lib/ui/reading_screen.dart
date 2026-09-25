@@ -132,7 +132,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
               const SizedBox(height: 4),
               const Text(
                 'SYL uses the model loaded in LM Studio. On the PC use http://127.0.0.1:1234. '
-                'On your phone use your PC\'s Wi-Fi address (e.g. http://192.168.0.109:1234) and turn on '
+                'On your phone use your PC\'s Wi-Fi address (e.g. http://<your PC IP>:1234) and turn on '
                 '"Serve on Local Network" in LM Studio.',
                 style: TextStyle(fontSize: 13, color: Syl.muted),
               ),

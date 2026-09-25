@@ -29,7 +29,7 @@ Set your book and the chapter you've reached (the app's Reading tab, or `python 
 
 1. In LM Studio, load a model, open the Developer tab and start the server (port 1234).
 2. PC: nothing else to do. `python syl.py ai-check` confirms the connection.
-3. Phone: turn on **Serve on Local Network** in LM Studio. In the app's Reading tab, set the address to `http://<PC IP>:1234` (currently `192.168.0.109`). Both devices must be on the same Wi-Fi. You may need to allow LM Studio through Windows Firewall.
+3. Phone: turn on **Serve on Local Network** in LM Studio. In the app's Reading tab, set the address to `http://<PC IP>:1234` (run `ipconfig` on the PC and use its IPv4 Address). Both devices must be on the same Wi-Fi. You may need to allow LM Studio through Windows Firewall.
 
 The AI only sees your notes up to the spoiler chapter. It is told to ignore anything it already knows about the book, write only from those notes, and never invent events. SYL uses whichever model is loaded, unless you name one in settings.
 
@@ -66,3 +66,7 @@ flutter pub get
 flutter run -d windows        # or an Android device
 flutter test
 ```
+
+## License
+
+MIT, see [LICENSE](LICENSE).
