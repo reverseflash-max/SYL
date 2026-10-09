@@ -82,6 +82,12 @@ flutter test
 
 The Python sync tests run from the project root with `python -m unittest discover tests`.
 
+## Android APK
+
+GitHub Actions builds the app on every push that changes `mobile/` and publishes it as the `apk-latest` release: open https://github.com/reverseflash-max/SYL/releases/tag/apk-latest on the phone and install `syl.apk`.
+
+The APK is signed with the key in the repository secrets `SYL_KEYSTORE_BASE64` (the keystore file, base64) and `SYL_KEYSTORE_PASSWORD`. Keep a private backup of the keystore: a new key means the next update can't install over the old app.
+
 ## License
 
 MIT, see [LICENSE](LICENSE).
