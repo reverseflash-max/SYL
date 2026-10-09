@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mobile/models/models.dart';
+import 'package:mobile/services/ai_service.dart';
 import 'package:mobile/services/sync_service.dart';
 import 'package:mobile/state/library_store.dart';
 
@@ -90,5 +91,11 @@ void main() {
   test('no address set gives a clear message', () async {
     final store = LibraryStore.memory(sync: SyncService(client: MockClient((_) async => http.Response('', 500))));
     await expectLater(store.syncWithPc(), throwsA(isA<SyncException>()));
+  });
+
+  test('pointing the AI address at the sync server explains the mix-up', () async {
+    final ai = AiService(client: MockClient((_) async => http.Response('{"error": "not found"}', 404)));
+    await expectLater(ai.listModels('192.168.0.106:8765'),
+        throwsA(isA<AiException>().having((e) => e.message, 'message', contains('port 1234'))));
   });
 }
