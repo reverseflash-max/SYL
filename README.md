@@ -30,7 +30,9 @@ Set your book and the chapter you've reached (the app's Reading tab, or `python 
 
 1. In LM Studio, load a model, open the Developer tab and start the server (port 1234).
 2. PC: nothing else to do. `python syl.py ai-check` confirms the connection.
-3. Phone: turn on **Serve on Local Network** in LM Studio. In the app's Reading tab, set the address to `http://<PC IP>:1234` (run `ipconfig` on the PC and use its IPv4 Address). Both devices must be on the same Wi-Fi. You may need to allow LM Studio through Windows Firewall.
+3. Phone: run `python syl.py serve` on the PC (see [Syncing phone and PC](#syncing-phone-and-pc)). In the app's Reading tab, set the LM Studio address to the **same address** `serve` prints, e.g. `http://192.168.1.20:8765`. The sync server passes AI requests on to LM Studio on the PC, so LM Studio itself never has to be opened to the network.
+
+If LM Studio isn't on port 1234 (its Local Model API page shows the Base URL), tell SYL once with `python syl.py settings --lm-url http://127.0.0.1:<port>`.
 
 The AI only sees your notes up to the spoiler chapter. It is told to ignore anything it already knows about the book, write only from those notes, and never invent events. SYL uses whichever model is loaded, unless you name one in settings.
 

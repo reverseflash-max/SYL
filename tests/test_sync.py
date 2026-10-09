@@ -165,5 +165,70 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(again["entities"], out["entities"])
 
 
+class LmStudioProxyTests(unittest.TestCase):
+    """The sync server passes the app's AI calls on to LM Studio on the PC."""
+
+    @classmethod
+    def setUpClass(cls):
+        from http.server import BaseHTTPRequestHandler
+
+        class FakeLmStudio(BaseHTTPRequestHandler):
+            def do_GET(self):
+                self._reply({"data": [{"id": "qwen"}]} if self.path == "/v1/models" else {"error": "nope"},
+                            200 if self.path == "/v1/models" else 404)
+
+            def do_POST(self):
+                sent = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+                self._reply({"choices": [{"message": {"content": "echo " + sent["model"]}}]}, 200)
+
+            def _reply(self, body, status):
+                data = json.dumps(body).encode()
+                self.send_response(status)
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+
+            def log_message(self, *a):
+                pass
+
+        cls.lm = ThreadingHTTPServer(("127.0.0.1", 0), FakeLmStudio)
+        threading.Thread(target=cls.lm.serve_forever, daemon=True).start()
+        syl_sync.SyncHandler.code = "123456"
+        cls.httpd = ThreadingHTTPServer(("127.0.0.1", 0), syl_sync.SyncHandler)
+        cls.base = f"http://127.0.0.1:{cls.httpd.server_address[1]}"
+        threading.Thread(target=cls.httpd.serve_forever, daemon=True).start()
+
+    @classmethod
+    def tearDownClass(cls):
+        for s in (cls.httpd, cls.lm):
+            s.shutdown()
+            s.server_close()
+
+    def set_lm_url(self, url):
+        s = core.load_settings()
+        s["lm_studio_url"] = url
+        core.save_settings(s)
+
+    def test_models_and_chat_are_passed_on(self):
+        self.set_lm_url(f"http://127.0.0.1:{self.lm.server_address[1]}")
+        with urllib.request.urlopen(self.base + "/v1/models", timeout=5) as r:
+            self.assertEqual(json.loads(r.read())["data"][0]["id"], "qwen")
+        req = urllib.request.Request(self.base + "/v1/chat/completions", data=json.dumps({"model": "qwen"}).encode())
+        with urllib.request.urlopen(req, timeout=5) as r:
+            self.assertEqual(json.loads(r.read())["choices"][0]["message"]["content"], "echo qwen")
+
+    def test_lm_studio_down_gives_a_clear_error(self):
+        self.set_lm_url("http://127.0.0.1:9")
+        with self.assertRaises(urllib.error.HTTPError) as cm:
+            urllib.request.urlopen(self.base + "/v1/models", timeout=5)
+        self.assertEqual(cm.exception.code, 502)
+        self.assertIn("can't reach LM Studio", json.loads(cm.exception.read())["error"])
+
+    def test_other_paths_are_not_passed_on(self):
+        with self.assertRaises(urllib.error.HTTPError) as cm:
+            urllib.request.urlopen(self.base + "/v1/embeddings", timeout=5)
+        self.assertEqual(cm.exception.code, 404)
+
+
 if __name__ == "__main__":
     unittest.main()

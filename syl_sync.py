@@ -16,7 +16,13 @@ Merge rules (nothing the user wrote is lost unless they deleted it):
     the deletion.
   - Links whose entities no longer exist are dropped.
 
-Every request must carry the pairing code in the X-SYL-Code header.
+Every sync request must carry the pairing code in the X-SYL-Code header.
+
+The server also passes the app's AI requests on to LM Studio on this PC
+(GET /v1/models, POST /v1/chat/completions, sent to settings.lm_studio_url).
+LM Studio then never has to be opened to the network: the phone uses this
+server's address as its LM Studio address too. Like LM Studio's own "serve on
+local network" option, these two routes need no pairing code.
 """
 
 from __future__ import annotations
@@ -27,6 +33,8 @@ import secrets
 import shutil
 import socket
 import threading
+import urllib.error
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
@@ -35,6 +43,7 @@ import syl_core as core
 DEFAULT_PORT = 8765
 MAX_BODY = 50 * 1024 * 1024
 BACKUP_DIR_NAME = "_sync_backup"
+AI_ROUTES = {("GET", "/v1/models"), ("POST", "/v1/chat/completions")}
 
 
 # --------------------------------------------------------------------------
@@ -221,7 +230,34 @@ class SyncHandler(BaseHTTPRequestHandler):
         self._send(401, {"error": "Wrong pairing code. Run `python syl.py serve` on the PC to see it."})
         return False
 
+    def _proxy_to_lm_studio(self, method: str) -> None:
+        settings = core.load_settings()
+        base = (settings.get("lm_studio_url") or core.DEFAULT_SETTINGS["lm_studio_url"]).rstrip("/")
+        body = None
+        if method == "POST":
+            length = int(self.headers.get("Content-Length") or 0)
+            if length <= 0 or length > MAX_BODY:
+                return self._send(413, {"error": "Request is empty or too large."})
+            body = self.rfile.read(length)
+        req = urllib.request.Request(base + self.path, data=body, method=method,
+                                     headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=300) as r:
+                status, data = r.status, r.read()
+        except urllib.error.HTTPError as e:
+            status, data = e.code, e.read()
+        except (urllib.error.URLError, TimeoutError, ConnectionError, OSError):
+            return self._send(502, {"error": f"The PC can't reach LM Studio at {base}. Start its server, "
+                                             "and check the address with: python syl.py settings --lm-url ..."})
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
     def do_GET(self):
+        if ("GET", self.path) in AI_ROUTES:
+            return self._proxy_to_lm_studio("GET")
         if self.path.rstrip("/") != "/ping":
             return self._send(404, {"error": "not found"})
         if not self._authorised():
@@ -230,6 +266,8 @@ class SyncHandler(BaseHTTPRequestHandler):
                          "entities": len(core.load_all_entities())})
 
     def do_POST(self):
+        if ("POST", self.path) in AI_ROUTES:
+            return self._proxy_to_lm_studio("POST")
         if self.path.rstrip("/") != "/sync":
             return self._send(404, {"error": "not found"})
         if not self._authorised():
@@ -260,6 +298,8 @@ def serve(host: str = "0.0.0.0", port: int = DEFAULT_PORT) -> None:
     print("SYL sync server running. In the app (Reading tab, Sync with your PC) enter:")
     print(f"  Address:      http://{lan_address()}:{port}")
     print(f"  Pairing code: {SyncHandler.code}")
+    print(f"For AI on the phone (Reading tab, AI on your PC) use the same address: http://{lan_address()}:{port}")
+    print(f"  (passed on to LM Studio at {core.load_settings().get('lm_studio_url')})")
     print("Phone and PC must be on the same Wi-Fi. Allow Python through Windows Firewall if asked.")
     print("Press Ctrl+C to stop.")
     try:
