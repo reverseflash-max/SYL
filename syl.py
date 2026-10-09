@@ -24,6 +24,9 @@ SYL command line. One tool for everything the old scripts did.
 
     python syl.py settings --book "The Lord of the Rings" --chapter 7
     python syl.py settings --lm-url http://127.0.0.1:1234 --model qwen
+
+    python syl.py serve                 (sync server for the phone app, same Wi-Fi)
+    python syl.py serve --new-code      (make a new pairing code)
 """
 
 from __future__ import annotations
@@ -431,6 +434,18 @@ def cmd_settings(args):
         print(f"{k}: {v}")
 
 
+def cmd_serve(args):
+    import syl_sync
+    if args.new_code:
+        s = core.load_settings()
+        s["sync_code"] = ""
+        core.save_settings(s)
+    try:
+        syl_sync.serve(args.host, args.port)
+    except OSError as e:
+        die(f"Could not start the server on port {args.port}: {e}")
+
+
 # --------------------------------------------------------------------------
 
 def build_parser() -> argparse.ArgumentParser:
@@ -492,6 +507,12 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--chapter", type=int, help="spoiler shield chapter (0 = off)")
     sp.add_argument("--lm-url"); sp.add_argument("--model", help='LM Studio model id ("" = auto)')
     sp.set_defaults(fn=cmd_settings)
+
+    sp = sub.add_parser("serve", help="sync server for the phone app (same Wi-Fi)")
+    sp.add_argument("--port", type=int, default=8765)
+    sp.add_argument("--host", default="0.0.0.0", help="address to listen on (default: all)")
+    sp.add_argument("--new-code", action="store_true", help="replace the pairing code")
+    sp.set_defaults(fn=cmd_serve)
     return p
 
 

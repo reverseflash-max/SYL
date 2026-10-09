@@ -5,7 +5,7 @@ import '../state/library_store.dart';
 import '../theme/syl_theme.dart';
 import 'widgets/common.dart';
 
-/// Reading progress (spoiler shield) and the LM Studio connection.
+/// Reading progress (spoiler shield), the LM Studio connection and PC sync.
 class ReadingScreen extends StatefulWidget {
   const ReadingScreen({super.key});
   @override
@@ -17,7 +17,10 @@ class _ReadingScreenState extends State<ReadingScreen> {
   late final TextEditingController _chapter;
   late final TextEditingController _url;
   late final TextEditingController _model;
+  late final TextEditingController _syncUrl;
+  late final TextEditingController _syncCode;
   String? _status;
+  String? _syncStatus;
   bool _testing = false;
 
   @override
@@ -28,6 +31,8 @@ class _ReadingScreenState extends State<ReadingScreen> {
     _chapter = TextEditingController(text: s.spoilerChapter?.toString() ?? '');
     _url = TextEditingController(text: s.lmStudioUrl);
     _model = TextEditingController(text: s.lmModel);
+    _syncUrl = TextEditingController(text: s.syncUrl);
+    _syncCode = TextEditingController(text: s.syncCode);
   }
 
   @override
@@ -36,6 +41,8 @@ class _ReadingScreenState extends State<ReadingScreen> {
     _chapter.dispose();
     _url.dispose();
     _model.dispose();
+    _syncUrl.dispose();
+    _syncCode.dispose();
     super.dispose();
   }
 
@@ -50,8 +57,26 @@ class _ReadingScreenState extends State<ReadingScreen> {
       clearSpoiler: ch == null || ch <= 0,
       lmStudioUrl: _url.text.trim(),
       lmModel: _model.text.trim(),
+      syncUrl: _syncUrl.text.trim(),
+      syncCode: _syncCode.text.trim(),
     ));
     if (mounted) showMessage(context, 'Saved');
+  }
+
+  Future<void> _sync() async {
+    final store = context.read<LibraryStore>();
+    setState(() => _syncStatus = null);
+    await store.updateSettings(store.settings.copyWith(
+      syncUrl: _syncUrl.text.trim(),
+      syncCode: _syncCode.text.trim(),
+    ));
+    String msg;
+    try {
+      msg = await store.syncWithPc();
+    } catch (e) {
+      msg = e.toString();
+    }
+    if (mounted) setState(() => _syncStatus = msg);
   }
 
   Future<void> _test() async {
@@ -154,6 +179,44 @@ class _ReadingScreenState extends State<ReadingScreen> {
               if (_status != null) ...[
                 const SizedBox(height: 10),
                 Text(_status!, style: const TextStyle(fontSize: 13)),
+              ],
+            ]),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(color: Syl.white, borderRadius: Syl.r24),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              const Text('Sync with your PC', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 4),
+              const Text(
+                'On the PC run: python syl.py serve. It shows the address and pairing code to enter here. '
+                'Both devices need to be on the same Wi-Fi. Entries, facts, links and deletions are merged both ways.',
+                style: TextStyle(fontSize: 13, color: Syl.muted),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _syncUrl,
+                keyboardType: TextInputType.url,
+                decoration: const InputDecoration(labelText: 'PC sync address', hintText: 'http://<your PC IP>:8765'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _syncCode,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Pairing code'),
+              ),
+              const SizedBox(height: 12),
+              Row(children: [
+                PillButton(
+                  label: store.syncing ? 'Syncing...' : 'Sync now',
+                  icon: Icons.sync,
+                  onTap: store.syncing ? null : _sync,
+                ),
+              ]),
+              if (_syncStatus != null) ...[
+                const SizedBox(height: 10),
+                Text(_syncStatus!, style: const TextStyle(fontSize: 13)),
               ],
             ]),
           ),
