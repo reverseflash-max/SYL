@@ -14,7 +14,7 @@ A spoiler-aware fantasy reading companion. The user records facts per chapter. S
 | `syl_wikidata.py` | Wikidata search/fetch (URL-encoded, SSL verified, type from P31). Never writes facts. |
 | `syl_ai.py` | LM Studio client plus the spoiler-safe lore prompt |
 | `syl.py` | The single CLI (replaces the old per-feature scripts) |
-| `syl_sync.py` | LAN sync: merge rules and the `syl.py serve` HTTP server. The PC is the hub |
+| `syl_sync.py` | LAN sync: merge rules and the `syl.py serve` HTTP server. The PC is the hub. Also forwards the phone's AI calls (`/v1/models`, `/v1/chat/completions`) to LM Studio, so the phone uses the sync address for AI too |
 | `tests/test_sync.py` | Python tests for the merge rules and the server |
 | `migrate_data.py` | One-time v1 to v2 migration (already run; safe to rerun) |
 | `mobile/lib/models/models.dart` | Dart mirror of the schema (tolerant parser, reads old formats) |
@@ -37,6 +37,8 @@ A spoiler-aware fantasy reading companion. The user records facts per chapter. S
 - After `flutter analyze` passes, run the app and open every screen. Analyze does not catch runtime state bugs.
 
 ## Known gaps / next ideas
+
+- APKs come from GitHub Actions (`.github/workflows/android-apk.yml`, release `apk-latest`), signed with a throwaway debug key per build. Updating needs sync, uninstall, reinstall, sync until a permanent signing key is set up.
 
 - Sync is manual: the user taps Sync now. The server must be running on the PC, and the PC is found by typing its IP address (no auto-discovery).
 - Sync matches entries by id. The same character created on both devices under different ids (e.g. a slug on the phone, a Wikidata QID on the PC) ends up as two entries.
