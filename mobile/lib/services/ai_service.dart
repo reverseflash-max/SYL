@@ -41,6 +41,10 @@ class AiService {
   Future<List<String>> listModels(String baseUrl) async {
     try {
       final r = await _client.get(_uri(baseUrl, '/v1/models')).timeout(const Duration(seconds: 6));
+      if (r.statusCode == 404) {
+        throw AiException("Something answered at $baseUrl, but it isn't LM Studio. "
+            'LM Studio normally uses port 1234 (e.g. http://<your PC IP>:1234); port 8765 is SYL sync.');
+      }
       if (r.statusCode != 200) throw AiException('LM Studio returned HTTP ${r.statusCode}');
       final data = jsonDecode(utf8.decode(r.bodyBytes)) as Map<String, dynamic>;
       return (data['data'] as List? ?? [])

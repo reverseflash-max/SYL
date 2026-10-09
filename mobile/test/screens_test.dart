@@ -90,6 +90,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Spoiler shield'), findsOneWidget);
     expect(find.text('AI on your PC'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Sync with your PC'), 200,
+        scrollable: find.ancestor(of: find.text('AI on your PC'), matching: find.byType(Scrollable)).first);
+    expect(find.text('Sync now'), findsOneWidget);
 
     // Global quick add creates a new entity
     await tester.tap(find.byTooltip('Add a fact'));

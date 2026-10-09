@@ -3,23 +3,27 @@ import 'package:flutter/foundation.dart';
 import '../data/storage.dart';
 import '../models/models.dart';
 import '../services/ai_service.dart';
+import '../services/sync_service.dart';
 import '../services/wikidata_service.dart';
 
 /// The single source of app state. Screens read it with
 /// `context.watch<LibraryStore>()` and call its methods to change things;
 /// every change is written straight to disk.
 class LibraryStore extends ChangeNotifier {
-  LibraryStore({WikidataService? wikidata, AiService? ai})
+  LibraryStore({WikidataService? wikidata, AiService? ai, SyncService? sync})
       : wikidata = wikidata ?? WikidataService(),
-        ai = ai ?? AiService();
+        ai = ai ?? AiService(),
+        sync = sync ?? SyncService();
 
   /// In-memory store for tests and previews: nothing is written to disk.
   LibraryStore.memory({
     List<Entity> entities = const [],
     List<Relationship> relationships = const [],
     AppSettings settings = const AppSettings(),
+    SyncService? sync,
   })  : wikidata = WikidataService(),
         ai = AiService(),
+        sync = sync ?? SyncService(),
         _memoryOnly = true {
     _entities = [...entities];
     _relationships = [...relationships];
@@ -30,11 +34,13 @@ class LibraryStore extends ChangeNotifier {
   bool _memoryOnly = false;
   final WikidataService wikidata;
   final AiService ai;
+  final SyncService sync;
   SylStorage? _storage;
 
   List<Entity> _entities = [];
   List<Relationship> _relationships = [];
   AppSettings _settings = const AppSettings();
+  DeletedLog _deleted = DeletedLog();
   bool _loading = true;
   String? _error;
   final Set<String> _busy = {}; // entity ids with an AI/Wikidata call in flight
@@ -58,6 +64,7 @@ class LibraryStore extends ChangeNotifier {
       _entities = await _storage!.loadEntities();
       _relationships = await _storage!.loadRelationships();
       _settings = await _storage!.loadSettings();
+      _deleted = await _storage!.loadDeleted();
     } catch (e) {
       _error = 'Could not open the SYL library: $e';
     } finally {
@@ -176,8 +183,14 @@ class LibraryStore extends ChangeNotifier {
   Future<void> deleteEntity(String id) async {
     await _storage?.deleteEntity(id);
     _entities.removeWhere((e) => e.id == id);
+    final now = nowIso();
+    _deleted.entities[id] = now;
+    for (final r in _relationships.where((r) => r.involves(id))) {
+      _deleted.relationships[r.key] = now;
+    }
     _relationships.removeWhere((r) => r.involves(id));
     await _storage?.saveRelationships(_relationships);
+    await _storage?.saveDeleted(_deleted);
     notifyListeners();
   }
 
@@ -197,6 +210,8 @@ class LibraryStore extends ChangeNotifier {
 
   Future<void> removeFact(Entity e, String factId) async {
     final current = byId(e.id) ?? e;
+    _deleted.facts[factId] = nowIso();
+    await _storage?.saveDeleted(_deleted);
     await _put(current.copyWith(facts: current.facts.where((f) => f.id != factId).toList()));
   }
 
@@ -219,7 +234,9 @@ class LibraryStore extends ChangeNotifier {
 
   Future<void> removeLink(Relationship r) async {
     _relationships.removeWhere((x) => x.source == r.source && x.target == r.target && x.type == r.type);
+    _deleted.relationships[r.key] = nowIso();
     await _storage?.saveRelationships(_relationships);
+    await _storage?.saveDeleted(_deleted);
     notifyListeners();
   }
 
@@ -227,6 +244,39 @@ class LibraryStore extends ChangeNotifier {
     _settings = s;
     await _storage?.saveSettings(s);
     notifyListeners();
+  }
+
+  // ---- sync with the PC -------------------------------------------------------
+
+  bool _syncing = false;
+  bool get syncing => _syncing;
+
+  /// Send this library to `syl.py serve` on the PC and take the merged
+  /// library it returns. Returns a short summary for the user.
+  Future<String> syncWithPc() async {
+    if (_syncing) return 'A sync is already running.';
+    _syncing = true;
+    notifyListeners();
+    try {
+      final before = _entities.length;
+      final r = await sync.sync(
+        _settings.syncUrl,
+        _settings.syncCode,
+        entities: _entities,
+        relationships: _relationships,
+        deleted: _deleted,
+      );
+      await _storage?.replaceLibrary(r.entities, r.relationships, r.deleted);
+      _entities = [...r.entities];
+      _relationships = [...r.relationships];
+      _deleted = r.deleted;
+      final diff = _entities.length - before;
+      final change = diff == 0 ? 'no new entries' : (diff > 0 ? '$diff new' : '${-diff} removed');
+      return 'Synced: ${_entities.length} entries ($change), ${_relationships.length} links.';
+    } finally {
+      _syncing = false;
+      notifyListeners();
+    }
   }
 
   // ---- Wikidata -------------------------------------------------------------

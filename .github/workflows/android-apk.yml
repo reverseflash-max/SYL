@@ -1,0 +1,85 @@
+# Builds the Android app and publishes it as the "apk-latest" release, so the
+# newest APK is always at https://github.com/<owner>/SYL/releases/tag/apk-latest
+name: Android APK
+
+on:
+  push:
+    paths:
+      - "mobile/**"
+      - ".github/workflows/android-apk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      # The permanent signing key, from the repository secrets SYL_KEYSTORE_BASE64
+      # and SYL_KEYSTORE_PASSWORD. Without them the APK is signed with a
+      # throwaway key and can't update an installed copy.
+      - name: Set up signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.SYL_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.SYL_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo "::warning::No signing key secrets set; this APK can't update an installed copy."
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/syl-upload.jks
+          {
+            echo "storeFile=syl-upload.jks"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=syl"
+            echo "keyPassword=$KEYSTORE_PASSWORD"
+          } > android/key.properties
+
+      - run: flutter build apk --release
+
+      - name: Check the APK signature
+        run: |
+          apksigner=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$apksigner" verify --print-certs build/app/outputs/flutter-apk/app-release.apk | grep -i "SHA-256"
+
+      - name: Rename APK
+        run: cp build/app/outputs/flutter-apk/app-release.apk syl.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: syl-apk
+          path: mobile/syl.apk
+
+      - name: Publish as the apk-latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete apk-latest --yes --cleanup-tag || true
+          gh release create apk-latest syl.apk \
+            --prerelease \
+            --target "$GITHUB_SHA" \
+            --title "SYL app (latest build)" \
+            --notes "Built from ${GITHUB_REF_NAME} @ ${GITHUB_SHA::7}. On your phone: download syl.apk, open it, and allow installing from this source if asked."

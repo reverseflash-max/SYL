@@ -22,7 +22,7 @@ try:
 except Exception:
     pass
 
-SKIP = {"relationships.json", "settings.json"}
+SKIP = {"relationships.json", "settings.json", "deleted.json"}
 TEST_NOTE_MARKERS = ("test note", "automated test")
 BOOK_HINTS = [("tolkien", "The Lord of the Rings"), ("middle-earth", "The Lord of the Rings"),
               ("mistborn", "Mistborn")]
