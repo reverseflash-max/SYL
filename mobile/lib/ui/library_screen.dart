@@ -351,46 +351,29 @@ class _HillsPainter extends CustomPainter {
 
     final deep = Paint()..color = _Night.deep;
     // tower: body, roof, battlements
-    final tx = w * 0.2;
-    const tw = 38.0;
-    canvas.drawRect(Rect.fromLTWH(tx, h * 0.44, tw, h * 0.42), deep);
+    final tx = w * 0.17;
+    const tw = 50.0;
+    canvas.drawRect(Rect.fromLTWH(tx, h * 0.42, tw, h * 0.44), deep);
     canvas.drawPath(
         Path()
-          ..moveTo(tx - 4, h * 0.44)
-          ..lineTo(tx + tw + 4, h * 0.44)
-          ..lineTo(tx + tw, h * 0.39)
-          ..lineTo(tx, h * 0.39)
+          ..moveTo(tx - 5, h * 0.42)
+          ..lineTo(tx + tw + 5, h * 0.42)
+          ..lineTo(tx + tw, h * 0.37)
+          ..lineTo(tx, h * 0.37)
           ..close(),
         deep);
-    for (var i = 0; i < 5; i++) {
-      canvas.drawRect(Rect.fromLTWH(tx - 4 + i * 9.6, h * 0.33, 5, h * 0.06), deep);
+    for (var i = 0; i < 6; i++) {
+      canvas.drawRect(Rect.fromLTWH(tx - 5 + i * 10.6, h * 0.31, 6, h * 0.06), deep);
     }
-    // the lit window, with someone inside reading a book
-    final win = Rect.fromLTWH(tx + 8, h * 0.5, 22, 24);
+    // the lit window, with someone inside reading
+    final win = Rect.fromLTWH(tx + 9, h * 0.46, 32, 38);
     canvas.drawRRect(
-        RRect.fromRectAndCorners(win, topLeft: const Radius.circular(9), topRight: const Radius.circular(9)),
+        RRect.fromRectAndCorners(win, topLeft: const Radius.circular(16), topRight: const Radius.circular(16)),
         Paint()..color = Syl.accent);
-    final reader = Paint()..color = _Night.deep;
-    final cx = win.left + 7, top = win.top + 6;
-    canvas.drawCircle(Offset(cx, top + 2.6), 2.6, reader); // head, bent over the page
-    canvas.drawPath(
-        Path() // shoulders and back
-          ..moveTo(cx - 5.5, win.bottom)
-          ..quadraticBezierTo(cx - 5.5, top + 6.5, cx - 1, top + 6)
-          ..lineTo(cx + 2, top + 6)
-          ..quadraticBezierTo(cx + 4.5, top + 7, cx + 4.5, win.bottom)
-          ..close(),
-        reader);
-    canvas.drawPath(
-        Path() // the open book, held up in front
-          ..moveTo(cx + 2.5, top + 9.5)
-          ..lineTo(cx + 6, top + 7.2)
-          ..lineTo(cx + 9.5, top + 9.5)
-          ..lineTo(cx + 9.5, top + 12.5)
-          ..lineTo(cx + 6, top + 10.5)
-          ..lineTo(cx + 2.5, top + 12.5)
-          ..close(),
-        reader);
+    canvas.save();
+    canvas.clipRect(win);
+    _reader(canvas, win, Paint()..color = _Night.deep);
+    canvas.restore();
     // trees
     for (final (x, size) in [(0.5, 20.0), (0.55, 16.0), (0.84, 16.0)]) {
       canvas.drawPath(
@@ -409,6 +392,51 @@ class _HillsPainter extends CustomPainter {
       ..lineTo(0, h)
       ..close();
     canvas.drawPath(near, deep);
+  }
+
+  /// A reader seen side-on, head bowed over a book held up in both hands,
+  /// drawn in a 100 x 100 box fitted to [r].
+  static void _reader(Canvas canvas, Rect r, Paint p) {
+    canvas.save();
+    canvas.translate(r.left, r.top);
+    canvas.scale(r.width / 100, r.height / 100);
+    // head, tipped forward towards the page
+    canvas.save();
+    canvas.translate(44, 30);
+    canvas.rotate(0.35);
+    canvas.drawOval(const Rect.fromLTWH(-13, -15, 26, 30), p);
+    canvas.restore();
+    // neck, back and lap
+    canvas.drawPath(
+        Path()
+          ..moveTo(36, 40)
+          ..cubicTo(26, 48, 18, 62, 16, 82)
+          ..lineTo(14, 100)
+          ..lineTo(92, 100)
+          ..cubicTo(90, 92, 80, 86, 66, 84)
+          ..lineTo(60, 66)
+          ..cubicTo(56, 54, 52, 46, 46, 42)
+          ..close(),
+        p);
+    // forearm up to the book
+    canvas.drawPath(
+        Path()
+          ..moveTo(52, 70)
+          ..lineTo(70, 60)
+          ..lineTo(74, 66)
+          ..lineTo(58, 78)
+          ..close(),
+        p);
+    // the open book, tilted up towards the face
+    canvas.drawPath(
+        Path()
+          ..moveTo(62, 46)
+          ..lineTo(78, 40)
+          ..lineTo(88, 62)
+          ..lineTo(72, 70)
+          ..close(),
+        p);
+    canvas.restore();
   }
 
   @override
