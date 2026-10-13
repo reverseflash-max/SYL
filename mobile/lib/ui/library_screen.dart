@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../models/models.dart';
@@ -8,8 +9,40 @@ import 'entity_screen.dart';
 import 'new_entity_screen.dart';
 import 'widgets/common.dart';
 
-/// The current book's entries as bubbles, coloured by type, under a
-/// "Reading now" bubble. Anything past your chapter is counted, never named.
+/// "Night watch": the Library as a night drawing in over the book. Your
+/// chapter is the moon, the last few chapters are the moons before it, and
+/// the entries are bubbles in jewel tones. Anything past your chapter is
+/// counted, never named. The night is the Library's own world, so it stays
+/// dark in light mode too.
+class _Night {
+  static const ground = Color(0xFF1B2240);
+  static const deep = Color(0xFF121830);
+  static const hill = Color(0xFF2A3360);
+  static const ink = Color(0xFFF2EEE6);
+  static const muted = Color(0xFFA9B0CC);
+  static const faint = Color(0xFF5A6289);
+  static const teal = Color(0xFF86D6C6);
+  static const pill = Color(0xFF262E52);
+
+  /// Bubble colour per type: sapphire, emerald, amethyst, garnet, slate.
+  static Color type(String t) => switch (t) {
+        'Character' => const Color(0xFF34509A),
+        'Location' => const Color(0xFF235A43),
+        'Item' => const Color(0xFF55387E),
+        'Lore' => const Color(0xFF74293A),
+        _ => const Color(0xFF34405A),
+      };
+
+  /// Filter dots, light enough to read on the night.
+  static Color dot(String t) => switch (t) {
+        'Character' => const Color(0xFF8FB0F5),
+        'Location' => const Color(0xFF6FD39A),
+        'Item' => const Color(0xFFB9A3F0),
+        'Lore' => const Color(0xFFF59A8B),
+        _ => muted,
+      };
+}
+
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key, required this.onOpenReading});
   final VoidCallback onOpenReading;
@@ -38,10 +71,22 @@ class _LibraryScreenState extends State<LibraryScreen> {
     ('Other', 'Other'),
   ];
 
+  /// Moves your bookmark on a chapter, with a way back.
+  Future<void> _finishChapter(LibraryStore store, int cap) async {
+    final before = store.settings;
+    await store.updateSettings(before.copyWith(spoilerChapter: cap + 1));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text('Bookmark moved to ch. ${cap + 1}'),
+        action: SnackBarAction(label: 'Undo', onPressed: () => store.updateSettings(before)),
+      ));
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = context.watch<LibraryStore>();
-    final t = Theme.of(context).textTheme;
     final book = store.settings.currentBook;
     final cap = store.spoilerChapter;
     bool inBook(Entity e) => book == null || e.book == null || e.book == book;
@@ -56,9 +101,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
     final bookEntities = store.entities.where(inBook).toList();
     final shown = bookEntities.where((e) => !pastBookmark(e)).toList();
-    final shownFacts = shown.fold(0, (n, e) => n + e.visibleFacts(cap).length);
     final hiddenEntries = bookEntities.length - shown.length;
     final hiddenFacts = cap == null ? 0 : shown.fold(0, (n, e) => n + e.facts.length - e.visibleFacts(cap).length);
+    final newTonight = cap == null ? 0 : shown.where((e) => e.visibleFacts(cap).any((f) => f.chapter == cap)).length;
     final otherBooks = store.entities.length - bookEntities.length;
     final sealed = !searching && _type == null && (hiddenFacts > 0 || hiddenEntries > 0);
 
@@ -80,170 +125,302 @@ class _LibraryScreenState extends State<LibraryScreen> {
     if (sealed) place(_SealedBubble(facts: hiddenFacts, entries: hiddenEntries), 120);
     place(const _NewEntryTile(), 88);
 
-    return SafeArea(
-      bottom: false,
-      child: RefreshIndicator(
-        color: Syl.ink,
-        onRefresh: store.load,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 120),
-          children: [
-            Row(children: [
-              const Text('syl.', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22, letterSpacing: -0.5)),
-              const Spacer(),
-              RoundIconButton(
-                icon: _searching ? Icons.close : Icons.search,
-                tooltip: _searching ? 'Close search' : 'Search',
-                onPressed: () => setState(() {
-                  _searching = !_searching;
-                  if (!_searching) _query.clear();
-                }),
-              ),
-            ]),
-            const SizedBox(height: 16),
-            if (_searching) ...[
-              TextField(
-                controller: _query,
-                autofocus: true,
-                onChanged: (_) => setState(() {}),
-                decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Who is this again?'),
-              ),
-              const SizedBox(height: 16),
-            ] else ...[
-              Text('Library', style: t.displaySmall?.copyWith(fontSize: 52)),
-              const SizedBox(height: 6),
-              Text(
-                '${shown.length} ${shown.length == 1 ? 'entry' : 'entries'} · $shownFacts ${shownFacts == 1 ? 'fact' : 'facts'}',
-                style: TextStyle(fontSize: 15, color: Syl.muted),
-              ),
-              const SizedBox(height: 16),
-              _ReadingBubble(onTap: widget.onOpenReading),
-              const SizedBox(height: 16),
-            ],
-            SizedBox(
-              height: 48,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: _filters.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (_, i) {
-                  final (type, label) = _filters[i];
-                  return FilterPill(
-                    label: label,
-                    dot: type == null ? null : Syl.typeDot(type),
-                    selected: _type == type,
-                    onTap: () => setState(() => _type = type),
-                  );
-                },
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: ColoredBox(
+        color: _Night.ground,
+        child: DefaultTextStyle.merge(
+          style: const TextStyle(color: _Night.ink),
+          child: IconTheme.merge(
+            data: const IconThemeData(color: _Night.ink),
+            child: SafeArea(
+              bottom: false,
+              child: RefreshIndicator(
+                color: _Night.ground,
+                onRefresh: store.load,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(0, 8, 0, 120),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(22, 0, 12, 0),
+                      child: Row(children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: widget.onOpenReading,
+                            child: Text(book ?? 'No book set',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 14, color: _Night.muted)),
+                          ),
+                        ),
+                        RoundIconButton(
+                          icon: _searching ? Icons.close : Icons.search,
+                          tooltip: _searching ? 'Close search' : 'Search',
+                          background: Colors.white.withValues(alpha: 0.08),
+                          foreground: _Night.ink,
+                          onPressed: () => setState(() {
+                            _searching = !_searching;
+                            if (!_searching) _query.clear();
+                          }),
+                        ),
+                      ]),
+                    ),
+                    if (_searching)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(18, 12, 18, 16),
+                        child: TextField(
+                          controller: _query,
+                          autofocus: true,
+                          onChanged: (_) => setState(() {}),
+                          decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Who is this again?'),
+                        ),
+                      )
+                    else
+                      _Sky(
+                        chapter: cap,
+                        newTonight: newTonight,
+                        onFinished: cap == null ? widget.onOpenReading : () => _finishChapter(store, cap),
+                      ),
+                    SizedBox(
+                      height: 48,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.symmetric(horizontal: 18),
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _filters.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (_, i) {
+                          final (type, label) = _filters[i];
+                          return _NightPill(
+                            label: label,
+                            dot: type == null ? null : _Night.dot(type),
+                            selected: _type == type,
+                            onTap: () => setState(() => _type = type),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      child: Column(children: [
+                        if (store.error != null)
+                          Padding(padding: const EdgeInsets.all(16), child: Text(store.error!))
+                        else ...[
+                          if (items.isEmpty) _EmptyState(filtered: searching || _type != null),
+                          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Expanded(child: Column(children: left)),
+                            const SizedBox(width: 10),
+                            Expanded(child: Column(children: right)),
+                          ]),
+                        ],
+                        if (!searching && book != null && otherBooks > 0)
+                          _OtherBooksRow(count: otherBooks, onTap: widget.onOpenReading),
+                      ]),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 16),
-            if (store.error != null)
-              Padding(padding: const EdgeInsets.all(16), child: Text(store.error!))
-            else ...[
-              if (items.isEmpty) _EmptyState(filtered: searching || _type != null),
-              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Expanded(child: Column(children: left)),
-                const SizedBox(width: 10),
-                Expanded(child: Column(children: right)),
-              ]),
-            ],
-            if (!searching && book != null && otherBooks > 0) _OtherBooksRow(count: otherBooks, onTap: widget.onOpenReading),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-/// The dark "Reading now" bubble: cover, book and your chapter.
-class _ReadingBubble extends StatelessWidget {
-  const _ReadingBubble({required this.onTap});
-  final VoidCallback onTap;
+/// The hero: "ch. 12" big, the moons of the last few chapters, a hillside
+/// with a lit tower window, and the button that moves you on a chapter.
+class _Sky extends StatelessWidget {
+  const _Sky({required this.chapter, required this.newTonight, required this.onFinished});
+  final int? chapter;
+  final int newTonight;
+  final VoidCallback onFinished;
 
   @override
   Widget build(BuildContext context) {
-    final s = context.watch<LibraryStore>().settings;
-    final book = s.currentBook;
-    return Material(
-      color: Syl.inverse,
-      borderRadius: const BorderRadius.all(Radius.circular(28)),
-      child: InkWell(
-        borderRadius: const BorderRadius.all(Radius.circular(28)),
-        onTap: onTap,
+    final cap = chapter;
+    final line = cap == null
+        ? 'Set the chapter you\'re on, and nothing past it will reach you.'
+        : '${newTonight == 0 ? 'Nothing new yet tonight' : newTonight == 1 ? 'One new face tonight' : '$newTonight new faces tonight'}. '
+            'Nothing past here can reach you.';
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(22, 2, 22, 0),
+        child: cap == null
+            ? Text('No chapter set', style: Syl.serif(context, fontSize: 40, color: _Night.ink, height: 1.1))
+            : Text.rich(
+                TextSpan(children: [
+                  TextSpan(text: 'ch. ', style: Syl.serif(context, fontSize: 28, color: _Night.muted)),
+                  TextSpan(text: '$cap', style: Syl.serif(context, fontSize: 84, color: _Night.ink, height: 1, letterSpacing: -2)),
+                ]),
+              ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(22, 6, 22, 0),
+        child: Text(line, style: const TextStyle(fontSize: 15, height: 1.35, color: Color(0xFFC9CEE2))),
+      ),
+      if (cap != null) _Moons(chapter: cap),
+      const SizedBox(height: 150, child: CustomPaint(painter: _HillsPainter())),
+      Transform.translate(
+        offset: const Offset(0, -8),
         child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(children: [
-            BookCover(title: book ?? '?'),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Reading now', style: TextStyle(fontSize: 12, color: Syl.onInkMuted)),
-                const SizedBox(height: 2),
-                Text(book ?? 'Set your book',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Syl.dark
-                        ? Syl.serif(context, fontSize: 19, color: Syl.onInverse, height: 1.15)
-                        : TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Syl.onInverse)),
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: const BoxDecoration(color: Syl.accent, borderRadius: BorderRadius.all(Radius.circular(16))),
-                  child: Text(s.spoilerChapter == null ? 'Spoiler shield off' : 'Ch. ${s.spoilerChapter}',
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Syl.onAccent)),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  s.spoilerChapter == null
-                      ? 'Tap to set the chapter you\'re on'
-                      : 'Nothing past chapter ${s.spoilerChapter} is shown or sent to the AI',
-                  style: TextStyle(fontSize: 12, color: Syl.onInkMuted),
-                ),
-              ]),
+          padding: const EdgeInsets.fromLTRB(18, 0, 18, 10),
+          child: SizedBox(
+            height: 52,
+            child: FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Syl.accent, foregroundColor: Syl.onAccent),
+              onPressed: onFinished,
+              child: Text(cap == null ? 'Set my chapter' : 'I finished ch. $cap'),
             ),
-          ]),
+          ),
         ),
       ),
+    ]);
+  }
+}
+
+/// The last few chapters as full moons, yours in gold, the next one still dark.
+class _Moons extends StatelessWidget {
+  const _Moons({required this.chapter});
+  final int chapter;
+
+  @override
+  Widget build(BuildContext context) {
+    final first = (chapter - 3).clamp(1, chapter);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(22, 18, 22, 0),
+      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        for (var c = first; c <= chapter + 1; c++)
+          Column(children: [
+            Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: c > chapter ? null : (c == chapter ? Syl.accent : _Night.ink),
+                border: c > chapter ? Border.all(color: _Night.faint, width: 1.5) : null,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(c == chapter ? '$c, you' : '$c',
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: c == chapter ? FontWeight.w700 : FontWeight.w500,
+                    color: c == chapter ? Syl.accent : _Night.muted)),
+          ]),
+      ]),
     );
   }
 }
 
-/// Placeholder cover drawn from the title until real cover art is added.
-class BookCover extends StatelessWidget {
-  const BookCover({super.key, required this.title, this.width = 62});
-  final String title;
-  final double width;
+/// Stars, two hills and a tower with one lit window.
+class _HillsPainter extends CustomPainter {
+  const _HillsPainter();
 
-  static const _cloths = [Color(0xFF2C3B2F), Color(0xFF4A2326), Color(0xFF3B3350), Color(0xFF2D3A44)];
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width, h = size.height;
+    final p = Paint();
+    var s = 11;
+    double rnd() => (s = (s * 16807) % 2147483647) / 2147483647;
+    for (var i = 0; i < 26; i++) {
+      p.color = _Night.ink.withValues(alpha: 0.25 + rnd() * 0.5);
+      canvas.drawCircle(Offset(rnd() * w, rnd() * h * 0.5), 0.6 + rnd() * 0.8, p);
+    }
+    // a small constellation
+    final a = Offset(w * 0.69, h * 0.27), b = Offset(w * 0.8, h * 0.4), c = Offset(w * 0.61, h * 0.47);
+    final line = Paint()
+      ..color = _Night.teal.withValues(alpha: 0.7)
+      ..strokeWidth = 1;
+    canvas
+      ..drawLine(a, b, line)
+      ..drawLine(a, c, line);
+    p.color = _Night.ink;
+    canvas
+      ..drawCircle(a, 3.5, p)
+      ..drawCircle(b, 2.5, p)
+      ..drawCircle(c, 2.5, p);
+
+    final far = Path()
+      ..moveTo(0, h * 0.73)
+      ..cubicTo(w * 0.17, h * 0.53, w * 0.3, h * 0.67, w * 0.44, h * 0.6)
+      ..cubicTo(w * 0.6, h * 0.53, w * 0.75, h * 0.45, w, h * 0.63)
+      ..lineTo(w, h)
+      ..lineTo(0, h)
+      ..close();
+    canvas.drawPath(far, Paint()..color = _Night.hill);
+
+    final deep = Paint()..color = _Night.deep;
+    // tower: body, roof, battlements
+    final tx = w * 0.2;
+    canvas.drawRect(Rect.fromLTWH(tx, h * 0.48, 22, h * 0.36), deep);
+    canvas.drawPath(
+        Path()
+          ..moveTo(tx - 4, h * 0.48)
+          ..lineTo(tx + 26, h * 0.48)
+          ..lineTo(tx + 22, h * 0.43)
+          ..lineTo(tx, h * 0.43)
+          ..close(),
+        deep);
+    for (var i = 0; i < 4; i++) {
+      canvas.drawRect(Rect.fromLTWH(tx - 4 + i * 8.5, h * 0.37, 5, h * 0.06), deep);
+    }
+    canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromLTWH(tx + 7, h * 0.57, 8, 11), const Radius.circular(4)), Paint()..color = Syl.accent);
+    // trees
+    for (final (x, size) in [(0.5, 20.0), (0.55, 16.0), (0.84, 16.0)]) {
+      canvas.drawPath(
+          Path()
+            ..moveTo(w * x, h * 0.82)
+            ..lineTo(w * x + size / 2, h * 0.82 - size * 1.4)
+            ..lineTo(w * x + size, h * 0.82)
+            ..close(),
+          deep);
+    }
+    final near = Path()
+      ..moveTo(0, h * 0.85)
+      ..cubicTo(w * 0.2, h * 0.73, w * 0.4, h * 0.88, w * 0.61, h * 0.79)
+      ..cubicTo(w * 0.8, h * 0.74, w * 0.9, h * 0.78, w, h * 0.8)
+      ..lineTo(w, h)
+      ..lineTo(0, h)
+      ..close();
+    canvas.drawPath(near, deep);
+  }
+
+  @override
+  bool shouldRepaint(_HillsPainter old) => false;
+}
+
+class _NightPill extends StatelessWidget {
+  const _NightPill({required this.label, required this.selected, required this.onTap, this.dot});
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final Color? dot;
 
   @override
   Widget build(BuildContext context) {
-    var h = 0;
-    for (final c in title.codeUnits) {
-      h = (h * 31 + c) & 0x7fffffff;
-    }
-    final base = _cloths[h % _cloths.length];
-    return ExcludeSemantics(
-      child: Container(
-        width: width,
-        height: width * 1.47,
-        padding: const EdgeInsets.all(5),
-        decoration: BoxDecoration(
-          color: base,
-          borderRadius: const BorderRadius.horizontal(left: Radius.circular(4), right: Radius.circular(10)),
-          // a darker spine down the left edge
-          border: Border(left: BorderSide(color: Color.lerp(base, Colors.black, 0.35)!, width: 4)),
-        ),
+    return Material(
+      color: selected ? _Night.ink : _Night.pill,
+      shape: const StadiumBorder(),
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: onTap,
         child: Container(
-          alignment: Alignment.center,
-          padding: const EdgeInsets.all(3),
-          decoration: BoxDecoration(border: Border.all(color: const Color(0x55E9E2CC))),
-          child: Text(title,
-              textAlign: TextAlign.center,
-              maxLines: 4,
-              overflow: TextOverflow.ellipsis,
-              style: Syl.serif(context, fontSize: 11, color: const Color(0xFFE9E2CC), height: 1.15)),
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (dot != null) ...[
+              Container(width: 8, height: 8, decoration: BoxDecoration(color: dot, shape: BoxShape.circle)),
+              const SizedBox(width: 6),
+            ],
+            Text(label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  color: selected ? _Night.ground : _Night.ink,
+                )),
+          ]),
         ),
       ),
     );
@@ -258,7 +435,7 @@ String typeLabel(String type) => switch (type) {
       _ => 'Other',
     };
 
-/// One entry: a bubble in its type's colour, with the type's icon top right.
+/// One entry: a jewel-toned bubble with its type's icon top right.
 class _Bubble extends StatelessWidget {
   const _Bubble(this.e);
   final Entity e;
@@ -287,18 +464,18 @@ class _Bubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Material(
-        color: Syl.typeColor(e.type),
-        borderRadius: const BorderRadius.all(Radius.circular(26)),
+        color: _Night.type(e.type),
+        borderRadius: const BorderRadius.all(Radius.circular(24)),
         child: InkWell(
-          borderRadius: const BorderRadius.all(Radius.circular(26)),
+          borderRadius: const BorderRadius.all(Radius.circular(24)),
           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => EntityScreen(entityId: e.id))),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 12, 16),
+            padding: const EdgeInsets.fromLTRB(14, 12, 10, 14),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Expanded(
                   child: Wrap(spacing: 6, runSpacing: 6, children: [
-                    SoftTag(typeLabel(e.type)),
+                    SoftTag(typeLabel(e.type), background: Colors.white.withValues(alpha: 0.14), foreground: _Night.ink),
                     if (isNew) const _NewBadge(),
                   ]),
                 ),
@@ -306,32 +483,26 @@ class _Bubble extends StatelessWidget {
                 TypeIcon(e.type),
               ]),
               const SizedBox(height: 10),
-              Padding(
-                padding: const EdgeInsets.only(right: 4),
-                child: Text(e.name,
-                    style: Syl.dark
-                        ? Syl.serif(context, fontSize: 22, fontWeight: FontWeight.w700, color: Syl.ink, height: 1.05)
-                        : const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -0.7, height: 1)),
-              ),
-              const SizedBox(height: 8),
-              Padding(
-                padding: const EdgeInsets.only(right: 4),
-                child: Text(preview, maxLines: 4, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, height: 1.35)),
-              ),
+              Text(e.name, style: Syl.serif(context, fontSize: 21, fontWeight: FontWeight.w700, color: _Night.ink, height: 1.05)),
+              const SizedBox(height: 7),
+              Text(preview,
+                  maxLines: 4,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13.5, height: 1.35, color: _Night.ink.withValues(alpha: 0.88))),
               const SizedBox(height: 10),
               Row(children: [
                 Expanded(
                   child: Text('${facts.length} ${facts.length == 1 ? 'fact' : 'facts'}',
-                      maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                      maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: _Night.ink)),
                 ),
                 if (chapters != null)
                   Flexible(
                     child: Text(chapters,
-                        maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                        maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: _Night.ink)),
                   ),
                 if (!e.lore.isEmpty) ...[
                   const SizedBox(width: 6),
-                  const Icon(Icons.auto_awesome, size: 14, semanticLabel: 'Has AI lore'),
+                  const Icon(Icons.auto_awesome, size: 14, color: _Night.ink, semanticLabel: 'Has AI lore'),
                 ],
               ]),
             ]),
@@ -349,17 +520,18 @@ class _NewBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(color: Syl.inverse, borderRadius: const BorderRadius.all(Radius.circular(12))),
-      child: Text('New', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Syl.onInverse)),
+      decoration: const BoxDecoration(color: Syl.accent, borderRadius: BorderRadius.all(Radius.circular(12))),
+      child: const Text('New', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Syl.onAccent)),
     );
   }
 }
 
 /// A small drawn icon per type: hooded figure, tower, sword, scroll.
 class TypeIcon extends StatelessWidget {
-  const TypeIcon(this.type, {super.key, this.size = 34});
+  const TypeIcon(this.type, {super.key, this.size = 32, this.color = _Night.ink});
   final String type;
   final double size;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -368,9 +540,9 @@ class TypeIcon extends StatelessWidget {
       child: Container(
         width: size,
         height: size,
-        padding: EdgeInsets.all(size * 0.2),
-        decoration: BoxDecoration(color: Syl.ink.withValues(alpha: 0.08), shape: BoxShape.circle),
-        child: CustomPaint(painter: _GlyphPainter(type, Syl.ink.withValues(alpha: 0.75))),
+        padding: EdgeInsets.all(size * 0.22),
+        decoration: BoxDecoration(color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
+        child: CustomPaint(painter: _GlyphPainter(type, color.withValues(alpha: 0.85))),
       ),
     );
   }
@@ -488,17 +660,15 @@ class _SealedBubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: CustomPaint(
-        painter: _DashedBorder(Syl.line),
+        painter: const _DashedBorder(_Night.faint),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('${parts.join(' and ')} ${total == 1 ? 'waits' : 'wait'}',
-                style: Syl.dark
-                    ? Syl.serif(context, fontSize: 18, fontWeight: FontWeight.w700, color: Syl.ink)
-                    : const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.4)),
+                style: Syl.serif(context, fontSize: 18, fontWeight: FontWeight.w700, color: _Night.ink)),
             const SizedBox(height: 6),
-            Text('Past your bookmark. ${total == 1 ? 'It appears' : 'They appear'} as you read on.',
-                style: TextStyle(fontSize: 14, height: 1.35, color: Syl.muted)),
+            Text('Below the horizon. ${total == 1 ? 'It rises' : 'They rise'} as you read on.',
+                style: const TextStyle(fontSize: 13.5, height: 1.35, color: _Night.muted)),
           ]),
         ),
       ),
@@ -507,7 +677,7 @@ class _SealedBubble extends StatelessWidget {
 }
 
 class _DashedBorder extends CustomPainter {
-  _DashedBorder(this.color);
+  const _DashedBorder(this.color);
   final Color color;
 
   @override
@@ -515,11 +685,11 @@ class _DashedBorder extends CustomPainter {
     final p = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    final path = Path()..addRRect(RRect.fromRectAndRadius((Offset.zero & size).deflate(1), const Radius.circular(26)));
+      ..strokeWidth = 1.5;
+    final path = Path()..addRRect(RRect.fromRectAndRadius((Offset.zero & size).deflate(1), const Radius.circular(24)));
     for (final metric in path.computeMetrics()) {
-      for (var d = 0.0; d < metric.length; d += 12) {
-        canvas.drawPath(metric.extractPath(d, d + 6), p);
+      for (var d = 0.0; d < metric.length; d += 10) {
+        canvas.drawPath(metric.extractPath(d, d + 5), p);
       }
     }
   }
@@ -534,14 +704,17 @@ class _NewEntryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: Syl.r24,
+      borderRadius: const BorderRadius.all(Radius.circular(24)),
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NewEntityScreen())),
       child: Container(
         height: 88,
         width: double.infinity,
         alignment: Alignment.center,
-        decoration: BoxDecoration(borderRadius: Syl.r24, border: Border.all(color: Syl.line, width: 2)),
-        child: Text('+ New entry', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: Syl.muted)),
+        decoration: BoxDecoration(
+          borderRadius: const BorderRadius.all(Radius.circular(24)),
+          border: Border.all(color: _Night.pill, width: 2),
+        ),
+        child: const Text('+ New entry', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: _Night.muted)),
       ),
     );
   }
@@ -561,9 +734,9 @@ class _OtherBooksRow extends StatelessWidget {
         child: Row(children: [
           Expanded(
             child: Text('$count ${count == 1 ? 'entry is' : 'entries are'} in your other books',
-                style: TextStyle(fontSize: 14, color: Syl.muted)),
+                style: const TextStyle(fontSize: 14, color: _Night.muted)),
           ),
-          const Text('Switch book', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          const Text('Switch book', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: _Night.ink)),
         ]),
       ),
     );
@@ -579,14 +752,14 @@ class _EmptyState extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(color: Syl.white, borderRadius: Syl.r24),
+      decoration: const BoxDecoration(color: _Night.pill, borderRadius: BorderRadius.all(Radius.circular(24))),
       child: Column(children: [
-        Icon(Icons.auto_stories_outlined, size: 40, color: Syl.muted),
+        const Icon(Icons.auto_stories_outlined, size: 40, color: _Night.muted),
         const SizedBox(height: 12),
         Text(
           filtered ? 'Nothing matches. Try another word or filter.' : 'Your library is empty. Add the first character you meet.',
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 15),
+          style: const TextStyle(fontSize: 15, color: _Night.ink),
         ),
       ]),
     );

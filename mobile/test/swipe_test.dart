@@ -30,7 +30,7 @@ void main() {
 
     // Library -> Map
     expect(showing('Library'), isTrue);
-    await tester.fling(find.text('Library').first, const Offset(-300, 0), 1500);
+    await tester.fling(find.text('LOTR').first, const Offset(-300, 0), 1500); // the book name on the Library
     await tester.pumpAndSettle();
     expect(showing('Map'), isTrue);
 
