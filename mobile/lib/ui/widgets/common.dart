@@ -203,6 +203,21 @@ class PillButton extends StatelessWidget {
   }
 }
 
+/// While an entry's bubble grows into its page (and back), the moving shape
+/// is a plain rounded block in the entry's colour, so nothing inside it has
+/// to squeeze into the in-between sizes.
+HeroFlightShuttleBuilder entryFlight(Color color) => (context, animation, direction, from, to) => AnimatedBuilder(
+      animation: animation,
+      builder: (context, _) {
+        final t = Curves.easeInOut.transform(animation.value);
+        return Material(
+          color: color,
+          borderRadius: BorderRadius.lerp(const BorderRadius.all(Radius.circular(24)),
+              const BorderRadius.vertical(bottom: Radius.circular(36)), t),
+        );
+      },
+    );
+
 void showMessage(BuildContext context, String text) {
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()

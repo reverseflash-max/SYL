@@ -167,6 +167,32 @@ class Syl {
       ),
       dialogTheme: DialogThemeData(backgroundColor: paper),
       progressIndicatorTheme: ProgressIndicatorThemeData(color: ink),
+      pageTransitionsTheme: const PageTransitionsTheme(builders: {
+        TargetPlatform.android: DuskTransitions(),
+        TargetPlatform.iOS: DuskTransitions(),
+        TargetPlatform.windows: DuskTransitions(),
+        TargetPlatform.macOS: DuskTransitions(),
+        TargetPlatform.linux: DuskTransitions(),
+      }),
+    );
+  }
+}
+
+/// Screens open like dusk falling: a soft fade with a slight rise, instead of
+/// Android's stock zoom.
+class DuskTransitions extends PageTransitionsBuilder {
+  const DuskTransitions();
+
+  @override
+  Widget buildTransitions<T>(PageRoute<T> route, BuildContext context, Animation<double> animation,
+      Animation<double> secondaryAnimation, Widget child) {
+    final curve = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic);
+    return FadeTransition(
+      opacity: curve,
+      child: SlideTransition(
+        position: Tween(begin: const Offset(0, 0.04), end: Offset.zero).animate(curve),
+        child: child,
+      ),
     );
   }
 }

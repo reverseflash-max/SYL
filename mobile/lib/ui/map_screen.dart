@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui' show PathMetric;
 
+import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -265,7 +266,35 @@ class _Graph extends StatefulWidget {
   State<_Graph> createState() => _GraphState();
 }
 
-class _GraphState extends State<_Graph> {
+class _GraphState extends State<_Graph> with SingleTickerProviderStateMixin {
+  /// Stars glide from where they were to where they now belong when you pick
+  /// another one; a star that wasn't there before rises into place.
+  late final AnimationController _move = AnimationController(vsync: this, duration: const Duration(milliseconds: 550))
+    ..value = 1;
+  Map<String, Offset> _from = {}, _to = {};
+
+  @override
+  void dispose() {
+    _move.dispose();
+    super.dispose();
+  }
+
+  Map<String, Offset> _at(double t) => {
+        for (final id in _to.keys) id: Offset.lerp(_from[id] ?? _to[id]!, _to[id]!, t)!,
+      };
+
+  void _moveTo(Map<String, Offset> pos) {
+    if (mapEquals(pos, _to)) return;
+    if (_to.isEmpty) {
+      _from = _to = pos;
+      return;
+    }
+    final now = _at(Curves.easeOutCubic.transform(_move.value));
+    _from = {for (final id in pos.keys) id: now[id] ?? pos[id]! + const Offset(0, 60)};
+    _to = pos;
+    _move.forward(from: 0);
+  }
+
   /// The visible map area: the focus card and the bottom bar cover the rest.
   static const double _coveredBottom = 200;
 
@@ -335,6 +364,8 @@ class _GraphState extends State<_Graph> {
     ring(outer, r2, -math.pi / 2 + (inner.isEmpty ? 0 : math.pi / math.max(outer.length, 1)));
     final ringReach = outer.isEmpty ? (inner.isEmpty ? 0.0 : r1) : r2;
     _centreOn(focus.id, c, ringReach + _nodeWidth / 2 + 8, ringReach * 1.15 + 70);
+    final risen = {..._from.keys};
+    _moveTo(pos);
 
     return Stack(children: [
       NoTabSwipe(child: InteractiveViewer(
@@ -346,16 +377,24 @@ class _GraphState extends State<_Graph> {
         child: SizedBox(
           width: canvas.width,
           height: canvas.height,
-          child: Stack(clipBehavior: Clip.none, children: [
-            Positioned.fill(child: CustomPaint(painter: _EdgePainter(edges: edges, pos: pos, focus: focus.id))),
-            for (final e in widget.entities)
-              if (pos[e.id] != null)
-                _node(pos[e.id]!, e, e.id == focus.id, e.visibleFacts(store.spoilerChapter).length, unlinked.contains(e.id)),
-            // Labels last, so a node can never hide them.
-            for (final x in edges)
-              if (x.label != null && pos[x.a] != null && pos[x.b] != null)
-                _label(_labelPoint(pos[x.a]!, pos[x.b]!), x.label!, x.a == focus.id || x.b == focus.id),
-          ]),
+          child: AnimatedBuilder(
+            animation: _move,
+            builder: (context, _) {
+              final t = Curves.easeOutCubic.transform(_move.value);
+              final at = _at(t);
+              return Stack(clipBehavior: Clip.none, children: [
+                Positioned.fill(child: CustomPaint(painter: _EdgePainter(edges: edges, pos: at, focus: focus.id))),
+                for (final e in widget.entities)
+                  if (at[e.id] != null)
+                    _node(at[e.id]!, e, e.id == focus.id, e.visibleFacts(store.spoilerChapter).length, unlinked.contains(e.id),
+                        rise: risen.isEmpty || risen.contains(e.id) ? 1 : t),
+                // Labels last, so a node can never hide them.
+                for (final x in edges)
+                  if (x.label != null && at[x.a] != null && at[x.b] != null)
+                    _label(_labelPoint(at[x.a]!, at[x.b]!), x.label!, x.a == focus.id || x.b == focus.id),
+              ]);
+            },
+          ),
         ),
       )),
       if (widget.chapter != null)
@@ -387,7 +426,7 @@ class _GraphState extends State<_Graph> {
   }
 
   /// A node is placed by the centre of its circle, so edges meet the circle, not the name.
-  Widget _node(Offset p, Entity e, bool focused, int facts, bool unlinked) {
+  Widget _node(Offset p, Entity e, bool focused, int facts, bool unlinked, {double rise = 1}) {
     final avatar = focused ? _avatarFocused : _avatar;
     return Positioned(
       left: p.dx - _nodeWidth / 2,
@@ -395,7 +434,7 @@ class _GraphState extends State<_Graph> {
       width: _nodeWidth,
       // Entries with no link to the focus are dimmed, so its own connections stand out.
       child: Opacity(
-        opacity: unlinked ? 0.6 : 1,
+        opacity: (unlinked ? 0.6 : 1) * rise,
         child: _Node(entity: e, focused: focused, facts: facts, avatar: avatar, onTap: () => widget.onTap(e)),
       ),
     );

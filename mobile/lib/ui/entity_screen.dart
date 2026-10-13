@@ -32,7 +32,10 @@ class EntityScreen extends StatelessWidget {
         padding: EdgeInsets.zero,
         children: [
           // ---- coloured header -------------------------------------------------
-          Container(
+          Hero(
+            tag: 'entry-${e.id}',
+            flightShuttleBuilder: entryFlight(color),
+            child: Container(
             decoration: BoxDecoration(color: color, borderRadius: const BorderRadius.vertical(bottom: Radius.circular(36))),
             padding: EdgeInsets.fromLTRB(18, MediaQuery.of(context).padding.top + 12, 18, 24),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -83,7 +86,7 @@ class EntityScreen extends StatelessWidget {
                 _Stat(value: 'Ch.${e.discoveryChapter}', label: 'first seen'),
               ]),
             ]),
-          ),
+          )),
 
           Padding(
             padding: const EdgeInsets.fromLTRB(18, 18, 18, 40),

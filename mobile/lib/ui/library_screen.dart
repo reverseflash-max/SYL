@@ -245,20 +245,47 @@ class _Sky extends StatelessWidget {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(22, 2, 22, 0),
-        child: cap == null
-            ? Text('No chapter set', style: Syl.serif(context, fontSize: 40, color: _Night.ink, height: 1.1))
-            : Text.rich(
-                TextSpan(children: [
-                  TextSpan(text: 'ch. ', style: Syl.serif(context, fontSize: 28, color: _Night.muted)),
-                  TextSpan(text: '$cap', style: Syl.serif(context, fontSize: 84, color: _Night.ink, height: 1, letterSpacing: -2)),
-                ]),
-              ),
+        // A new chapter rolls up into place.
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 450),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          layoutBuilder: (current, previous) => Stack(alignment: Alignment.bottomLeft, children: [...previous, ?current]),
+          transitionBuilder: (child, animation) => ClipRect(
+            child: SlideTransition(
+              position: Tween(begin: const Offset(0, 0.6), end: Offset.zero).animate(animation),
+              child: FadeTransition(opacity: animation, child: child),
+            ),
+          ),
+          child: cap == null
+              ? Text('No chapter set',
+                  key: const ValueKey('none'), style: Syl.serif(context, fontSize: 40, color: _Night.ink, height: 1.1))
+              : Text.rich(
+                  key: ValueKey(cap),
+                  TextSpan(children: [
+                    TextSpan(text: 'ch. ', style: Syl.serif(context, fontSize: 28, color: _Night.muted)),
+                    TextSpan(text: '$cap', style: Syl.serif(context, fontSize: 84, color: _Night.ink, height: 1, letterSpacing: -2)),
+                  ]),
+                ),
+        ),
       ),
       Padding(
         padding: const EdgeInsets.fromLTRB(22, 6, 22, 0),
         child: Text(line, style: const TextStyle(fontSize: 15, height: 1.35, color: Color(0xFFC9CEE2))),
       ),
-      if (cap != null) _Moons(chapter: cap),
+      if (cap != null)
+        // The row of moons slides along by one when you finish a chapter.
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 500),
+          switchInCurve: Curves.easeOutCubic,
+          transitionBuilder: (child, animation) => ClipRect(
+            child: SlideTransition(
+              position: Tween(begin: const Offset(0.2, 0), end: Offset.zero).animate(animation),
+              child: FadeTransition(opacity: animation, child: child),
+            ),
+          ),
+          child: _Moons(key: ValueKey(cap), chapter: cap),
+        ),
       const SizedBox(height: 150, child: CustomPaint(painter: _HillsPainter())),
       Transform.translate(
         offset: const Offset(0, -8),
@@ -280,7 +307,7 @@ class _Sky extends StatelessWidget {
 
 /// The last few chapters as full moons, yours in gold, the next one still dark.
 class _Moons extends StatelessWidget {
-  const _Moons({required this.chapter});
+  const _Moons({super.key, required this.chapter});
   final int chapter;
 
   @override
@@ -474,7 +501,10 @@ class _Bubble extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
+      child: Hero(
+        tag: 'entry-${e.id}',
+        flightShuttleBuilder: entryFlight(_Night.type(e.type)),
+        child: Material(
         color: _Night.type(e.type),
         borderRadius: const BorderRadius.all(Radius.circular(24)),
         child: InkWell(
@@ -520,7 +550,7 @@ class _Bubble extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ));
   }
 }
 
