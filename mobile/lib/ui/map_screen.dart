@@ -124,7 +124,14 @@ class _MapScreenState extends State<MapScreen> {
   }
 }
 
-class _Graph extends StatelessWidget {
+/// Node footprint used for spacing: the circle plus the name underneath.
+const double _nodeWidth = 96;
+const double _avatar = 52, _avatarFocused = 64;
+
+/// Space between neighbouring nodes on a ring, and between the two rings.
+const double _nodeGap = _nodeWidth + 24;
+
+class _Graph extends StatefulWidget {
   const _Graph({
     required this.size,
     required this.entities,
@@ -142,36 +149,80 @@ class _Graph extends StatelessWidget {
   final TransformationController controller;
 
   @override
+  State<_Graph> createState() => _GraphState();
+}
+
+class _GraphState extends State<_Graph> {
+  /// The visible map area: the focus card and the bottom bar cover the rest.
+  static const double _coveredBottom = 200;
+
+  (String, Offset, double)? _centred; // focus, canvas point and zoom last applied
+
+  /// Up to this many entries share one ring, which fits on a phone screen.
+  static const int _oneRingMax = 7;
+
+  /// Radius at which [count] nodes fit around a circle without touching.
+  static double _ringRadius(int count, double minimum) =>
+      count < 2 ? minimum : math.max(minimum, (_nodeGap / 2) / math.sin(math.pi / count));
+
+  /// Put [point] in the middle of the visible area, zoomed out just enough
+  /// to show [reachX] and [reachY] around it (never below 60%).
+  void _centreOn(String id, Offset point, double reachX, double reachY) {
+    final visibleH = math.max(120.0, widget.size.height - _coveredBottom);
+    final scale = math.min(1.0, math.min(widget.size.width / 2 / reachX, visibleH / 2 / reachY)).clamp(0.6, 1.0);
+    if (_centred == (id, point, scale)) return;
+    _centred = (id, point, scale);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      widget.controller.value = Matrix4.identity()
+        ..translateByDouble(widget.size.width / 2, visibleH / 2, 0, 1)
+        ..scaleByDouble(scale, scale, 1, 1)
+        ..translateByDouble(-point.dx, -point.dy, 0, 1);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final store = context.read<LibraryStore>();
+    final focus = widget.focus;
+    final edges = widget.edges;
     final near = <String>{
       for (final x in edges)
         if (x.a == focus.id) x.b else if (x.b == focus.id) x.a,
     };
-    final inner = entities.where((e) => near.contains(e.id)).toList();
-    final outer = entities.where((e) => e.id != focus.id && !near.contains(e.id)).toList();
+    var inner = widget.entities.where((e) => near.contains(e.id)).toList();
+    var outer = widget.entities.where((e) => e.id != focus.id && !near.contains(e.id)).toList();
+    final unlinked = {for (final e in outer) e.id};
+    // A few entries share one ring (linked ones first); more get a second, outer ring.
+    if (inner.length + outer.length <= _oneRingMax) {
+      inner = [...inner, ...outer];
+      outer = [];
+    }
 
-    // canvas grows with the number of nodes so pills don't overlap
-    final side = math.max(math.min(size.width, size.height), 160.0 + 70.0 * math.max(inner.length, outer.length / 1.6));
-    final canvas = Size(math.max(size.width, side), math.max(size.height - 140, side));
+    // Rings sized from the nodes themselves, so nothing overlaps however many there are.
+    final r1 = _ringRadius(inner.length, 140);
+    final r2 = _ringRadius(outer.length, (inner.isEmpty ? 0 : r1) + _nodeGap + 20);
+    final reach = (outer.isEmpty ? r1 : r2) + _nodeWidth;
+    final canvas = Size(math.max(widget.size.width, reach * 2), math.max(widget.size.height, reach * 2.4));
     final c = Offset(canvas.width / 2, canvas.height / 2);
-    final r1 = math.min(canvas.width, canvas.height) * 0.30;
-    final r2 = math.min(canvas.width, canvas.height) * 0.46;
 
     final pos = <String, Offset>{focus.id: c};
     void ring(List<Entity> list, double r, double phase) {
       for (var i = 0; i < list.length; i++) {
         final a = phase + 2 * math.pi * i / list.length;
-        pos[list[i].id] = c + Offset(math.cos(a) * r, math.sin(a) * r * 0.85);
+        // Phones are tall, so rings stretch a little vertically for more room.
+        pos[list[i].id] = c + Offset(math.cos(a) * r, math.sin(a) * r * 1.15);
       }
     }
 
-    ring(inner, r1, -math.pi / 2 + 0.6);
-    ring(outer, r2, -math.pi / 2 + 0.2);
+    ring(inner, r1, -math.pi / 2);
+    ring(outer, r2, -math.pi / 2 + (inner.isEmpty ? 0 : math.pi / math.max(outer.length, 1)));
+    final ringReach = outer.isEmpty ? (inner.isEmpty ? 0.0 : r1) : r2;
+    _centreOn(focus.id, c, ringReach + _nodeWidth / 2 + 8, ringReach * 1.15 + 70);
 
     return Stack(children: [
       InteractiveViewer(
-        transformationController: controller,
+        transformationController: widget.controller,
         constrained: false,
         minScale: 0.4,
         maxScale: 2.5,
@@ -181,12 +232,13 @@ class _Graph extends StatelessWidget {
           height: canvas.height,
           child: Stack(clipBehavior: Clip.none, children: [
             Positioned.fill(child: CustomPaint(painter: _EdgePainter(edges: edges, pos: pos, focus: focus.id))),
+            for (final e in widget.entities)
+              if (pos[e.id] != null)
+                _node(pos[e.id]!, e, e.id == focus.id, e.visibleFacts(store.spoilerChapter).length, unlinked.contains(e.id)),
+            // Labels last, so a node can never hide them.
             for (final x in edges)
               if (x.label != null && pos[x.a] != null && pos[x.b] != null)
-                _at(_labelPoint(pos[x.a]!, pos[x.b]!), SoftTag(x.label!, background: Syl.ink, foreground: Syl.paper)),
-            for (final e in entities)
-              if (pos[e.id] != null)
-                _at(pos[e.id]!, _Node(entity: e, focused: e.id == focus.id, facts: e.visibleFacts(store.spoilerChapter).length, onTap: () => onTap(e))),
+                _label(_labelPoint(pos[x.a]!, pos[x.b]!), x.label!, x.a == focus.id || x.b == focus.id),
           ]),
         ),
       ),
@@ -199,10 +251,41 @@ class _Graph extends StatelessWidget {
     ]);
   }
 
-  Widget _at(Offset p, Widget child) => Positioned(
+  /// A node is placed by the centre of its circle, so edges meet the circle, not the name.
+  Widget _node(Offset p, Entity e, bool focused, int facts, bool unlinked) {
+    final avatar = focused ? _avatarFocused : _avatar;
+    return Positioned(
+      left: p.dx - _nodeWidth / 2,
+      top: p.dy - avatar / 2,
+      width: _nodeWidth,
+      // Entries with no link to the focus are dimmed, so its own connections stand out.
+      child: Opacity(
+        opacity: unlinked ? 0.6 : 1,
+        child: _Node(entity: e, focused: focused, facts: facts, avatar: avatar, onTap: () => widget.onTap(e)),
+      ),
+    );
+  }
+
+  Widget _label(Offset p, String text, bool strong) => Positioned(
         left: p.dx,
         top: p.dy,
-        child: FractionalTranslation(translation: const Offset(-0.5, -0.5), child: child),
+        child: FractionalTranslation(
+          translation: const Offset(-0.5, -0.5),
+          child: IgnorePointer(
+            child: Opacity(
+              opacity: strong ? 1 : 0.55,
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 110),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(color: strong ? Syl.ink : Syl.inkSoft, borderRadius: BorderRadius.circular(10)),
+                child: Text(text,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Syl.paper)),
+              ),
+            ),
+          ),
+        ),
       );
 
   /// Midpoint of the curved edge drawn by [_EdgePainter].
@@ -215,44 +298,48 @@ class _Graph extends StatelessWidget {
 }
 
 class _Node extends StatelessWidget {
-  const _Node({required this.entity, required this.focused, required this.facts, required this.onTap});
+  const _Node({required this.entity, required this.focused, required this.facts, required this.avatar, required this.onTap});
   final Entity entity;
   final bool focused;
   final int facts;
+  final double avatar;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final factsText = facts == 0 ? 'no facts yet' : '$facts ${facts == 1 ? 'fact' : 'facts'}';
     return Semantics(
       button: true,
-      label: focused ? 'Open ${entity.name}' : 'Focus ${entity.name}',
+      label: '${focused ? 'Open' : 'Focus'} ${entity.name}, $factsText',
+      excludeSemantics: true,
       child: GestureDetector(
         onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.fromLTRB(10, 10, 16, 10),
-          decoration: BoxDecoration(
-            color: Syl.cardColor(entity.id),
-            borderRadius: BorderRadius.circular(22),
-            border: focused ? Border.all(color: Syl.ink, width: 3) : null,
-            boxShadow: [BoxShadow(color: Syl.ink.withValues(alpha: 0.12), blurRadius: 18, offset: const Offset(0, 6))],
+        behavior: HitTestBehavior.opaque,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: avatar,
+            height: avatar,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Syl.cardColor(entity.id),
+              shape: BoxShape.circle,
+              border: Border.all(color: focused ? Syl.ink : Syl.white, width: focused ? 3 : 2),
+              boxShadow: [BoxShadow(color: Syl.ink.withValues(alpha: 0.12), blurRadius: 14, offset: const Offset(0, 5))],
+            ),
+            child: Text(entity.initial, style: TextStyle(fontWeight: FontWeight.w800, fontSize: avatar * 0.4, color: Syl.ink)),
           ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            InitialAvatar(entity.initial, size: focused ? 40 : 34),
-            const SizedBox(width: 10),
-            Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 130),
-                child: Text(entity.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: focused ? 17 : 15, fontWeight: FontWeight.w800, color: Syl.ink)),
-              ),
-              Text(facts == 0 ? 'no facts yet' : '$facts ${facts == 1 ? 'fact' : 'facts'}',
-                  style: const TextStyle(fontSize: 12, color: Syl.ink)),
-            ]),
-          ]),
-        ),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(color: Syl.paper.withValues(alpha: 0.9), borderRadius: BorderRadius.circular(8)),
+            child: Text(entity.name,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: focused ? 14 : 12.5, fontWeight: FontWeight.w800, color: Syl.ink, height: 1.15)),
+          ),
+        ]),
       ),
     );
   }
