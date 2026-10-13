@@ -312,7 +312,7 @@ class _Moons extends StatelessWidget {
   }
 }
 
-/// Stars, two hills and a tower with one lit window, where someone is reading.
+/// Stars, two hills, three towers and one lit window.
 class _HillsPainter extends CustomPainter {
   const _HillsPainter();
 
@@ -350,30 +350,16 @@ class _HillsPainter extends CustomPainter {
     canvas.drawPath(far, Paint()..color = _Night.hill);
 
     final deep = Paint()..color = _Night.deep;
-    // tower: body, roof, battlements
-    final tx = w * 0.14;
-    const tw = 68.0;
-    canvas.drawRect(Rect.fromLTWH(tx, h * 0.38, tw, h * 0.48), deep);
-    canvas.drawPath(
-        Path()
-          ..moveTo(tx - 5, h * 0.38)
-          ..lineTo(tx + tw + 5, h * 0.38)
-          ..lineTo(tx + tw, h * 0.33)
-          ..lineTo(tx, h * 0.33)
-          ..close(),
-        deep);
-    for (var i = 0; i < 7; i++) {
-      canvas.drawRect(Rect.fromLTWH(tx - 5 + i * 12.3, h * 0.27, 7, h * 0.06), deep);
-    }
-    // the lit window: a pale moon behind someone reading on the sill
-    final win = Rect.fromLTWH(tx + 10, h * 0.41, 48, 56);
-    canvas.save();
-    canvas.clipRRect(RRect.fromRectAndCorners(win, topLeft: const Radius.circular(24), topRight: const Radius.circular(24)));
-    canvas.drawRect(win, Paint()..color = Syl.accent);
-    canvas.drawCircle(Offset(win.left + win.width * 0.46, win.top + win.height * 0.38), win.width * 0.28,
-        Paint()..color = const Color(0xFFFFF6D6));
-    _reader(canvas, win, Paint()..color = _Night.deep);
-    canvas.restore();
+    // two towers further off, smaller and fainter, their windows dark
+    final far2 = Paint()..color = const Color(0xFF20284E);
+    _tower(canvas, w * 0.4, h * 0.6, 14, h * 0.2, far2);
+    _tower(canvas, w * 0.74, h * 0.5, 16, h * 0.24, far2);
+
+    // the near tower, with the one lit window
+    final tx = w * 0.2;
+    _tower(canvas, tx, h * 0.48, 22, h * 0.36, deep);
+    canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromLTWH(tx + 7, h * 0.57, 8, 11), const Radius.circular(4)), Paint()..color = Syl.accent);
     // trees
     for (final (x, size) in [(0.5, 20.0), (0.55, 16.0), (0.84, 16.0)]) {
       canvas.drawPath(
@@ -394,77 +380,22 @@ class _HillsPainter extends CustomPainter {
     canvas.drawPath(near, deep);
   }
 
-  /// A reader seen in profile, sitting on the sill with knees drawn up and a
-  /// book open against them, head bowed over the page. Drawn in a 100 x 104
-  /// box fitted to [r], facing left.
-  static void _reader(Canvas canvas, Rect r, Paint p) {
-    canvas.save();
-    canvas.translate(r.left, r.top);
-    canvas.scale(r.width / 100, r.height / 104);
-    canvas
-      // head, bowed: hair over the crown, a fringe falling forward, face in profile
-      ..drawPath(
-          Path()
-            ..moveTo(66, 36)
-            ..cubicTo(70, 28, 70, 19, 63, 14)
-            ..cubicTo(60, 10, 55, 9, 52, 11)
-            ..cubicTo(48, 12, 46, 15, 45, 19)
-            ..cubicTo(44, 21, 42, 23, 41, 25)
-            ..cubicTo(43, 25, 44, 25, 45, 25)
-            ..lineTo(44, 29)
-            ..lineTo(41.5, 33) // nose
-            ..cubicTo(42, 34, 43, 34, 44, 34)
-            ..lineTo(43.8, 36.5) // lips
-            ..lineTo(45, 38.5) // chin
-            ..cubicTo(47, 40.5, 50, 41, 53, 40)
-            ..lineTo(55, 44)
-            ..close(),
-          p)
-      // neck, hunched back, seat, and a raised knee with the shin down to the sill
-      ..drawPath(
-          Path()
-            ..moveTo(55, 43)
-            ..cubicTo(51, 46, 49, 51, 49, 57)
-            ..lineTo(31, 61)
-            ..cubicTo(26, 62, 24, 67, 25, 73)
-            ..lineTo(27, 99)
-            ..lineTo(21, 104)
-            ..lineTo(37, 104)
-            ..cubicTo(36, 94, 36, 86, 37, 80) // back of the calf
-            ..cubicTo(45, 85, 52, 91, 56, 98) // under the thigh
-            ..lineTo(58, 104)
-            ..lineTo(94, 104)
-            ..cubicTo(94, 86, 90, 66, 82, 54)
-            ..cubicTo(76, 45, 70, 39, 64, 36)
-            ..close(),
-          p)
-      // forearm reaching to the book
-      ..drawPath(
-          Path()
-            ..moveTo(50, 54)
-            ..cubicTo(46, 56, 41, 58, 37, 59)
-            ..lineTo(38, 63)
-            ..cubicTo(43, 62, 48, 61, 52, 59)
-            ..close(),
-          p)
-      // the open book against the knee
-      ..drawPath(
-          Path()
-            ..moveTo(25, 47)
-            ..lineTo(41, 41)
-            ..lineTo(47, 57)
-            ..lineTo(31, 63)
-            ..close(),
-          p);
-    // its page edges catch the light
-    final pages = Paint()
-      ..color = Syl.accent
-      ..strokeWidth = 1.4
-      ..style = PaintingStyle.stroke;
-    canvas
-      ..drawLine(const Offset(28, 50.5), const Offset(41.5, 45.5), pages)
-      ..drawLine(const Offset(30, 54.5), const Offset(43, 49.5), pages);
-    canvas.restore();
+  /// A tower: body, a sloped roof and battlements, standing at [top].
+  static void _tower(Canvas canvas, double x, double top, double width, double height, Paint p) {
+    canvas.drawRect(Rect.fromLTWH(x, top, width, height), p);
+    final eave = width * 0.18;
+    canvas.drawPath(
+        Path()
+          ..moveTo(x - eave, top)
+          ..lineTo(x + width + eave, top)
+          ..lineTo(x + width, top - height * 0.14)
+          ..lineTo(x, top - height * 0.14)
+          ..close(),
+        p);
+    final merlon = width * 0.23, gap = (width + 2 * eave - merlon) / 3;
+    for (var i = 0; i < 4; i++) {
+      canvas.drawRect(Rect.fromLTWH(x - eave + i * gap, top - height * 0.31, merlon, height * 0.17), p);
+    }
   }
 
   @override
