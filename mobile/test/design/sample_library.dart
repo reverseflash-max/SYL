@@ -98,6 +98,25 @@ LibraryStore sampleLibrary() {
       Relationship(source: 'Q180322', target: 'narsil', type: 'Carries', chapter: 10, createdAt: '2026-10-03T21:51:00'),
       Relationship(source: 'Q177499', target: 'Q180322', type: 'Old friend', chapter: 10, createdAt: '2026-10-04T21:30:00'),
     ],
-    settings: const AppSettings(currentBook: lotr, spoilerChapter: 12),
+    settings: const AppSettings(currentBook: lotr),
+    books: const [
+      Book(
+        id: 'the-lord-of-the-rings',
+        title: lotr,
+        author: 'J. R. R. Tolkien',
+        chapter: 12,
+        totalChapters: 22,
+        chapterNames: [
+          'A Long-expected Party', 'The Shadow of the Past', 'Three is Company', 'A Short Cut to Mushrooms',
+          'A Conspiracy Unmasked', 'The Old Forest', 'In the House of Tom Bombadil', 'Fog on the Barrow-Downs',
+          'At the Sign of the Prancing Pony', 'Strider', 'A Knife in the Dark', 'Flight to the Ford', 'Many Meetings',
+          'The Council of Elrond', 'The Ring Goes South', 'A Journey in the Dark', 'The Bridge of Khazad-dûm',
+          'Lothlórien', 'The Mirror of Galadriel', 'Farewell to Lórien', 'The Great River', 'The Breaking of the Fellowship',
+        ],
+      ),
+      Book(id: 'mistborn', title: mistborn, author: 'Brandon Sanderson', chapter: 5, totalChapters: 38),
+      Book(id: 'the-hobbit', title: 'The Hobbit', author: 'J. R. R. Tolkien', status: 'finished', rating: 5),
+      Book(id: 'elantris', title: 'Elantris', author: 'Brandon Sanderson', status: 'want'),
+    ],
   );
 }
