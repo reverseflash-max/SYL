@@ -407,6 +407,9 @@ class AppSettings {
   /// Pairing code printed by `syl.py serve`.
   final String syncCode;
 
+  /// 'system' (follow the phone), 'light' or 'dark'.
+  final String appearance;
+
   const AppSettings({
     this.currentBook,
     this.spoilerChapter,
@@ -414,6 +417,7 @@ class AppSettings {
     this.lmModel = '',
     this.syncUrl = '',
     this.syncCode = '',
+    this.appearance = 'system',
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> j) => AppSettings(
@@ -423,6 +427,7 @@ class AppSettings {
         lmModel: _str(j, ['lm_model']),
         syncUrl: _str(j, ['sync_url']),
         syncCode: _str(j, ['sync_code']),
+        appearance: _str(j, ['appearance'], 'system'),
       );
 
   Map<String, dynamic> toJson() => {
@@ -432,6 +437,7 @@ class AppSettings {
         'lm_model': lmModel,
         'sync_url': syncUrl,
         'sync_code': syncCode,
+        'appearance': appearance,
       };
 
   AppSettings copyWith({
@@ -443,6 +449,7 @@ class AppSettings {
     String? lmModel,
     String? syncUrl,
     String? syncCode,
+    String? appearance,
   }) =>
       AppSettings(
         currentBook: clearBook ? null : (currentBook ?? this.currentBook),
@@ -451,5 +458,6 @@ class AppSettings {
         lmModel: lmModel ?? this.lmModel,
         syncUrl: syncUrl ?? this.syncUrl,
         syncCode: syncCode ?? this.syncCode,
+        appearance: appearance ?? this.appearance,
       );
 }

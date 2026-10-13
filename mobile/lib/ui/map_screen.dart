@@ -85,7 +85,7 @@ class _MapScreenState extends State<MapScreen> {
             const SizedBox(height: 4),
             Text(
               '${_book ?? 'No book'}${store.spoilerChapter != null ? ' · to ch. ${store.spoilerChapter}' : ''}',
-              style: const TextStyle(fontSize: 14, color: Syl.muted),
+              style: TextStyle(fontSize: 14, color: Syl.muted),
             ),
             if (choices.length > 1) ...[
               const SizedBox(height: 12),
@@ -290,7 +290,7 @@ class _GraphState extends State<_Graph> {
                 child: Text(text,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Syl.paper)),
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Syl.paper)),
               ),
             ),
           ),
@@ -331,7 +331,7 @@ class _Node extends StatelessWidget {
             height: avatar,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: Syl.cardColor(entity.id),
+              color: Syl.typeColor(entity.type),
               shape: BoxShape.circle,
               border: Border.all(color: focused ? Syl.ink : Syl.white, width: focused ? 3 : 2),
               boxShadow: [BoxShadow(color: Syl.ink.withValues(alpha: 0.12), blurRadius: 14, offset: const Offset(0, 5))],
@@ -381,7 +381,7 @@ class _FocusCard extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
             Text(entity.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
             Text(lines.isEmpty ? 'No connections yet' : lines.join(' · '),
-                maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: Syl.muted)),
+                maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, color: Syl.muted)),
           ]),
         ),
         const SizedBox(width: 10),

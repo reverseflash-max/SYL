@@ -113,7 +113,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(color: Syl.butter, borderRadius: Syl.r24),
+            decoration: BoxDecoration(color: Syl.butter, borderRadius: Syl.r24),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               const Text('Spoiler shield', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
               const SizedBox(height: 4),
@@ -151,11 +151,11 @@ class _ReadingScreenState extends State<ReadingScreen> {
           const SizedBox(height: 14),
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(color: Syl.white, borderRadius: Syl.r24),
+            decoration: BoxDecoration(color: Syl.white, borderRadius: Syl.r24),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               const Text('AI on your PC', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
               const SizedBox(height: 4),
-              const Text(
+              Text(
                 'SYL uses the model loaded in LM Studio. On the PC, use http://127.0.0.1 and LM Studio\'s port '
                 '(usually 1234). On your phone, use the same address as Sync with your PC below, while '
                 'python syl.py serve is running: the PC passes AI requests on to LM Studio.',
@@ -185,11 +185,11 @@ class _ReadingScreenState extends State<ReadingScreen> {
           const SizedBox(height: 14),
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(color: Syl.white, borderRadius: Syl.r24),
+            decoration: BoxDecoration(color: Syl.white, borderRadius: Syl.r24),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               const Text('Sync with your PC', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
               const SizedBox(height: 4),
-              const Text(
+              Text(
                 'On the PC run: python syl.py serve. It shows the address and pairing code to enter here. '
                 'Both devices need to be on the same Wi-Fi. Entries, facts, links and deletions are merged both ways.',
                 style: TextStyle(fontSize: 13, color: Syl.muted),
@@ -220,10 +220,27 @@ class _ReadingScreenState extends State<ReadingScreen> {
               ],
             ]),
           ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: Syl.white, borderRadius: Syl.r24),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              const Text('Appearance', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 12),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                for (final (value, label) in const [('system', 'Follow phone'), ('light', 'Light'), ('dark', 'Dark')])
+                  FilterPill(
+                    label: label,
+                    selected: store.settings.appearance == value,
+                    onTap: () => store.updateSettings(store.settings.copyWith(appearance: value)),
+                  ),
+              ]),
+            ]),
+          ),
           const SizedBox(height: 18),
           FilledButton(onPressed: _save, child: const Text('Save')),
           const SizedBox(height: 18),
-          Text('Library folder: ${store.dataPath}', style: const TextStyle(fontSize: 12, color: Syl.muted)),
+          Text('Library folder: ${store.dataPath}', style: TextStyle(fontSize: 12, color: Syl.muted)),
         ],
       ),
     );

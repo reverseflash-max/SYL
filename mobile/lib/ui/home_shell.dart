@@ -133,9 +133,9 @@ class _PillNav extends StatelessWidget {
       height: 64,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: Syl.ink,
+        color: Syl.inverse,
         borderRadius: BorderRadius.circular(32),
-        boxShadow: [BoxShadow(color: Syl.ink.withValues(alpha: 0.28), blurRadius: 40, offset: const Offset(0, 16))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.28), blurRadius: 40, offset: const Offset(0, 16))],
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         for (var i = 0; i < _items.length; i++) ...[
@@ -145,12 +145,12 @@ class _PillNav extends StatelessWidget {
         Tooltip(
           message: 'Add a fact',
           child: Material(
-            color: Syl.butter,
+            color: Syl.accent,
             shape: const CircleBorder(),
             child: InkWell(
               customBorder: const CircleBorder(),
               onTap: () => showQuickAdd(context),
-              child: const SizedBox(width: 48, height: 48, child: Icon(Icons.add, color: Syl.ink, size: 26, semanticLabel: 'Add a fact')),
+              child: SizedBox(width: 48, height: 48, child: Icon(Icons.add, color: Syl.onAccent, size: 26, semanticLabel: 'Add a fact')),
             ),
           ),
         ),
@@ -173,7 +173,7 @@ class _NavItem extends StatelessWidget {
       button: true,
       label: label,
       child: Material(
-        color: selected ? Syl.paper : Colors.transparent,
+        color: selected ? Syl.onInverse : Colors.transparent,
         shape: const StadiumBorder(),
         child: InkWell(
           customBorder: const StadiumBorder(),
@@ -184,10 +184,10 @@ class _NavItem extends StatelessWidget {
             constraints: const BoxConstraints(minWidth: 48),
             padding: EdgeInsets.symmetric(horizontal: selected ? 16 : 13),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(icon, size: 21, color: selected ? Syl.ink : Syl.paper),
+              Icon(icon, size: 21, color: selected ? Syl.inverse : Syl.onInverse),
               if (selected) ...[
                 const SizedBox(width: 8),
-                Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Syl.ink)),
+                Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Syl.inverse)),
               ],
             ]),
           ),

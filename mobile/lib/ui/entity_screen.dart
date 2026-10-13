@@ -24,7 +24,7 @@ class EntityScreen extends StatelessWidget {
     final links = store.linksFor(e.id);
     final mentions = store.mentionsIn(e);
     final backlinks = store.mentionedBy(e).where((b) => !mentions.any((m) => m.id == b.id)).toList();
-    final color = Syl.cardColor(e.id);
+    final color = Syl.typeColor(e.type);
     final busy = store.isBusy(e.id);
 
     return Scaffold(
@@ -72,7 +72,7 @@ class EntityScreen extends StatelessWidget {
               ],
               if (e.external.aliases.isNotEmpty) ...[
                 const SizedBox(height: 4),
-                Text('Also: ${e.external.aliases.join(', ')}', style: const TextStyle(fontSize: 13, color: Syl.inkSoft)),
+                Text('Also: ${e.external.aliases.join(', ')}', style: TextStyle(fontSize: 13, color: Syl.inkSoft)),
               ],
               const SizedBox(height: 18),
               Row(children: [
@@ -170,27 +170,27 @@ class _LoreCard extends StatelessWidget {
     );
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(color: Syl.ink, borderRadius: Syl.r24),
+      decoration: BoxDecoration(color: Syl.inverse, borderRadius: Syl.r24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Container(
             width: 44,
             height: 44,
-            decoration: const BoxDecoration(color: Syl.lilac, borderRadius: Syl.r14),
-            child: const Icon(Icons.auto_awesome, color: Syl.ink),
+            decoration: BoxDecoration(color: Syl.lilac, borderRadius: Syl.r14),
+            child: Icon(Icons.auto_awesome, color: Syl.ink),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(lore.isEmpty ? 'No biography yet' : 'Lore',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Syl.paper)),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Syl.onInverse)),
               Text(
                 busy
                     ? 'Your PC is writing...'
                     : lore.isEmpty
                         ? (factCount == 0 ? 'Add a fact, then your PC can write one' : 'Your PC can write one from your facts')
                         : 'From facts up to ch. ${lore.spoilerLimitChapter ?? '?'} · ${lore.model ?? 'local model'}',
-                style: const TextStyle(fontSize: 12, color: Syl.onInkMuted),
+                style: TextStyle(fontSize: 12, color: Syl.onInkMuted),
               ),
             ]),
           ),
@@ -200,10 +200,10 @@ class _LoreCard extends StatelessWidget {
         if (!lore.isEmpty) ...[
           const SizedBox(height: 14),
           if (lore.description.isNotEmpty)
-            Text(lore.description, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Syl.paper, height: 1.35)),
+            Text(lore.description, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Syl.onInverse, height: 1.35)),
           if (lore.biography.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Text(lore.biography, style: const TextStyle(fontSize: 14, color: Syl.paper, height: 1.45)),
+            Text(lore.biography, style: TextStyle(fontSize: 14, color: Syl.onInverse, height: 1.45)),
           ],
           if (lore.tags.isNotEmpty) ...[
             const SizedBox(height: 12),
@@ -272,7 +272,7 @@ class _FactRow extends StatelessWidget {
           alignment: Alignment.centerRight,
           padding: const EdgeInsets.only(right: 20),
           decoration: BoxDecoration(color: Syl.danger.withValues(alpha: 0.15), borderRadius: Syl.r20),
-          child: const Icon(Icons.delete_outline, color: Syl.danger),
+          child: Icon(Icons.delete_outline, color: Syl.danger),
         ),
         confirmDismiss: (_) async =>
             await showDialog<bool>(
@@ -282,7 +282,7 @@ class _FactRow extends StatelessWidget {
                 content: Text(fact.text),
                 actions: [
                   TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Keep')),
-                  TextButton(onPressed: () => Navigator.pop(d, true), child: const Text('Delete', style: TextStyle(color: Syl.danger))),
+                  TextButton(onPressed: () => Navigator.pop(d, true), child: Text('Delete', style: TextStyle(color: Syl.danger))),
                 ],
               ),
             ) ??
@@ -290,7 +290,7 @@ class _FactRow extends StatelessWidget {
         onDismissed: (_) => context.read<LibraryStore>().removeFact(entity, fact.id),
         child: Container(
           padding: const EdgeInsets.all(14),
-          decoration: const BoxDecoration(color: Syl.white, borderRadius: Syl.r20),
+          decoration: BoxDecoration(color: Syl.white, borderRadius: Syl.r20),
           child: Row(children: [
             ChapterBadge(fact.chapter, color: Syl.pastels[fact.chapter % Syl.pastels.length]),
             const SizedBox(width: 12),
@@ -317,7 +317,7 @@ class _LinkRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
-        color: Syl.cardColor(other.id),
+        color: Syl.typeColor(other.type),
         borderRadius: Syl.r20,
         child: InkWell(
           borderRadius: Syl.r20,
@@ -329,7 +329,7 @@ class _LinkRow extends StatelessWidget {
                 title: const Text('Remove this link?'),
                 actions: [
                   TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Keep')),
-                  TextButton(onPressed: () => Navigator.pop(d, true), child: const Text('Remove', style: TextStyle(color: Syl.danger))),
+                  TextButton(onPressed: () => Navigator.pop(d, true), child: Text('Remove', style: TextStyle(color: Syl.danger))),
                 ],
               ),
             );
@@ -372,11 +372,11 @@ class _MentionRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(borderRadius: Syl.r20, border: Border.all(color: Syl.line, width: 1.5)),
           child: Row(children: [
-            InitialAvatar(other.initial, background: Syl.cardColor(other.id)),
+            InitialAvatar(other.initial, background: Syl.typeColor(other.type)),
             const SizedBox(width: 12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(label, style: const TextStyle(fontSize: 12, color: Syl.muted)),
+                Text(label, style: TextStyle(fontSize: 12, color: Syl.muted)),
                 Text(other.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               ]),
             ),
@@ -395,6 +395,6 @@ class _Hint extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Text(text, style: const TextStyle(color: Syl.muted, fontSize: 14)),
+        child: Text(text, style: TextStyle(color: Syl.muted, fontSize: 14)),
       );
 }

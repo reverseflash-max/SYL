@@ -9,15 +9,15 @@ class RoundIconButton extends StatelessWidget {
     required this.icon,
     required this.tooltip,
     required this.onPressed,
-    this.background = Syl.white,
-    this.foreground = Syl.ink,
+    this.background,
+    this.foreground,
   });
 
   final IconData icon;
   final String tooltip;
   final VoidCallback? onPressed;
-  final Color background;
-  final Color foreground;
+  final Color? background;
+  final Color? foreground;
 
   @override
   Widget build(BuildContext context) {
@@ -29,13 +29,13 @@ class RoundIconButton extends StatelessWidget {
       child: Tooltip(
         message: tooltip,
         child: Material(
-          color: background,
+          color: background ?? Syl.white,
           shape: const CircleBorder(),
           child: InkWell(
             customBorder: const CircleBorder(),
             onTap: onPressed,
             // 48dp: Android's minimum tap target.
-            child: SizedBox(width: 48, height: 48, child: Icon(icon, size: 22, color: foreground, semanticLabel: tooltip)),
+            child: SizedBox(width: 48, height: 48, child: Icon(icon, size: 22, color: foreground ?? Syl.ink, semanticLabel: tooltip)),
           ),
         ),
       ),
@@ -45,11 +45,11 @@ class RoundIconButton extends StatelessWidget {
 
 /// Small rounded label like "Character" or "Q204274".
 class SoftTag extends StatelessWidget {
-  const SoftTag(this.label, {super.key, this.dot, this.background, this.foreground = Syl.ink});
+  const SoftTag(this.label, {super.key, this.dot, this.background, this.foreground});
   final String label;
   final Color? dot;
   final Color? background;
-  final Color foreground;
+  final Color? foreground;
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +68,7 @@ class SoftTag extends StatelessWidget {
           child: Text(label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: foreground)),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: foreground ?? Syl.ink)),
         ),
       ]),
     );
@@ -138,10 +138,10 @@ class ChapterBadge extends StatelessWidget {
 
 /// White circle with an initial.
 class InitialAvatar extends StatelessWidget {
-  const InitialAvatar(this.initial, {super.key, this.size = 40, this.background = Syl.white});
+  const InitialAvatar(this.initial, {super.key, this.size = 40, this.background});
   final String initial;
   final double size;
-  final Color background;
+  final Color? background;
 
   @override
   Widget build(BuildContext context) {
@@ -149,7 +149,7 @@ class InitialAvatar extends StatelessWidget {
       width: size,
       height: size,
       alignment: Alignment.center,
-      decoration: BoxDecoration(color: background, shape: BoxShape.circle),
+      decoration: BoxDecoration(color: background ?? Syl.white, shape: BoxShape.circle),
       child: Text(initial, style: TextStyle(fontWeight: FontWeight.w800, fontSize: size * 0.42)),
     );
   }

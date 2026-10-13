@@ -139,7 +139,7 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
           FilledButton(
             onPressed: _saving ? null : _save,
             child: _saving
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Syl.paper))
+                ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Syl.paper))
                 : const Text('Save fact'),
           ),
         ]),
@@ -199,7 +199,7 @@ class _LinkSheetState extends State<_LinkSheet> {
           _target == null
               ? 'Pick who or what they are connected to.'
               : '${widget.source.name} is $_type of ${_target!.name}',
-          style: const TextStyle(color: Syl.muted),
+          style: TextStyle(color: Syl.muted),
         ),
         const SizedBox(height: 16),
         SizedBox(
@@ -307,7 +307,7 @@ class _EditSheetState extends State<_EditSheet> {
                   content: const Text('Its facts and links go too. This cannot be undone.'),
                   actions: [
                     TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Cancel')),
-                    TextButton(onPressed: () => Navigator.pop(d, true), child: const Text('Delete', style: TextStyle(color: Syl.danger))),
+                    TextButton(onPressed: () => Navigator.pop(d, true), child: Text('Delete', style: TextStyle(color: Syl.danger))),
                   ],
                 ),
               );
@@ -319,8 +319,8 @@ class _EditSheetState extends State<_EditSheet> {
                   ..pop();
               }
             },
-            icon: const Icon(Icons.delete_outline, color: Syl.danger),
-            label: const Text('Delete', style: TextStyle(color: Syl.danger)),
+            icon: Icon(Icons.delete_outline, color: Syl.danger),
+            label: Text('Delete', style: TextStyle(color: Syl.danger)),
           ),
           const Spacer(),
           FilledButton(
@@ -404,7 +404,7 @@ class _WikidataSheetState extends State<_WikidataSheet> {
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Text('Wikidata', style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 4),
-          Text('Results for "${widget.query}". Pick the right one.', style: const TextStyle(color: Syl.muted)),
+          Text('Results for "${widget.query}". Pick the right one.', style: TextStyle(color: Syl.muted)),
           const SizedBox(height: 12),
           Flexible(
             child: FutureBuilder<List<WikidataCandidate>>(

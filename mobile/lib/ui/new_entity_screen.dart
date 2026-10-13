@@ -106,7 +106,7 @@ class _NewEntityScreenState extends State<NewEntityScreen> {
             else
               Container(
                 padding: const EdgeInsets.all(14),
-                decoration: const BoxDecoration(color: Syl.mint, borderRadius: Syl.r20),
+                decoration: BoxDecoration(color: Syl.mint, borderRadius: Syl.r20),
                 child: Row(children: [
                   const Icon(Icons.check_circle_outline),
                   const SizedBox(width: 10),
@@ -135,7 +135,7 @@ class _NewEntityScreenState extends State<NewEntityScreen> {
             FilledButton(
               onPressed: _saving ? null : _create,
               child: _saving
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Syl.paper))
+                  ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Syl.paper))
                   : const Text('Create'),
             ),
           ],
