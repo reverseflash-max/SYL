@@ -64,7 +64,7 @@ class _MapScreenState extends State<MapScreen> {
       _book = choices.contains(current) || choices.isEmpty ? current : choices.first;
       _bookInit = true;
     }
-    final ents = store.entities.where((e) => e.book == _book).toList();
+    final ents = store.entities.where((e) => _book == null ? e.book == null : sameTitle(e.book, _book)).toList();
     final ids = {for (final e in ents) e.id};
 
     // edges

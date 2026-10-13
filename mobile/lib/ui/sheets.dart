@@ -290,13 +290,12 @@ class _EditSheet extends StatefulWidget {
 
 class _EditSheetState extends State<_EditSheet> {
   late final _name = TextEditingController(text: widget.entity.name);
-  late final _book = TextEditingController(text: widget.entity.book ?? '');
+  late String? _book = widget.entity.book;
   late String _type = widget.entity.type;
 
   @override
   void dispose() {
     _name.dispose();
-    _book.dispose();
     super.dispose();
   }
 
@@ -312,7 +311,7 @@ class _EditSheetState extends State<_EditSheet> {
         const SizedBox(height: 12),
         TypePicker(value: _type, onChanged: (t) => setState(() => _type = t)),
         const SizedBox(height: 12),
-        TextField(controller: _book, decoration: const InputDecoration(labelText: 'Book')),
+        BookPicker(value: _book, onChanged: (b) => setState(() => _book = b)),
         const SizedBox(height: 20),
         Row(children: [
           TextButton.icon(
@@ -344,12 +343,11 @@ class _EditSheetState extends State<_EditSheet> {
             onPressed: () async {
               final name = _name.text.trim();
               if (name.isEmpty) return;
-              final book = _book.text.trim();
               await store.updateEntity(widget.entity.copyWith(
                 name: name,
                 type: _type,
-                book: book.isEmpty ? null : book,
-                clearBook: book.isEmpty,
+                book: _book,
+                clearBook: _book == null,
               ));
               if (context.mounted) Navigator.pop(context);
             },

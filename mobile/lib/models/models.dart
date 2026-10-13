@@ -373,6 +373,10 @@ class Relationship {
   String other(String id) => source == id ? target : source;
 }
 
+/// Whether two book titles name the same book: capitals and stray spaces
+/// don't count ("mistborn" is "Mistborn").
+bool sameTitle(String? a, String? b) => a != null && b != null && a.trim().toLowerCase() == b.trim().toLowerCase();
+
 /// A book you're reading, have read or want to read (data/books.json).
 /// Entries point at a book by its title ([Entity.book]). Each book keeps its
 /// own chapter, and that is the spoiler shield for the entries in it.

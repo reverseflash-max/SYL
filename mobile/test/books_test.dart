@@ -57,6 +57,27 @@ void main() {
     expect(store.settings.currentBook, 'The Lord of the Rings'); // the Library keeps its book
   });
 
+  test('"mistborn" and "Mistborn" are one book, and entries follow its spelling', () async {
+    final store = LibraryStore.memory(
+      entities: [
+        const Entity(id: 'kelsier', name: 'Kelsier', type: 'Character', book: 'Mistborn', meta: meta),
+        const Entity(id: 'vin', name: 'Vin', type: 'Character', book: 'mistborn ', meta: meta),
+        const Entity(id: 'ron', name: 'Ron', type: 'Character', book: 'Harry Potter', meta: meta),
+      ],
+      settings: const AppSettings(currentBook: 'mistborn'),
+      books: const [
+        Book(id: 'mistborn', title: 'mistborn', chapter: 5, updatedAt: '2026-10-02T10:00:00'),
+        Book(id: 'mistborn-2', title: 'Mistborn', updatedAt: '2026-10-01T10:00:00'),
+      ],
+    );
+    expect(store.books.length, 2); // one Mistborn, however it's spelled
+    await store.tidyBooks();
+    expect(store.books, ['Harry Potter', 'Mistborn']);
+    expect(store.bookList.map((b) => (b.title, b.chapter)), [('Mistborn', 5), ('Harry Potter', null)]);
+    expect(store.byId('vin')!.book, 'Mistborn');
+    expect(store.settings.currentBook, 'Mistborn');
+  });
+
   test('Open Library tables of contents are cleaned down to the chapters', () {
     // Shapes taken from real Open Library editions.
     expect(

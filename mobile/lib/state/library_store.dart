@@ -132,6 +132,7 @@ class LibraryStore extends ChangeNotifier {
       } else {
         _books = books;
       }
+      await tidyBooks();
     } catch (e) {
       _error = 'Could not open the SYL library: $e';
     } finally {
@@ -157,14 +158,72 @@ class LibraryStore extends ChangeNotifier {
     return null;
   }
 
-  /// Every book title in use: your books plus any an entry names.
+  /// Every book title in use: your books plus any an entry names (one
+  /// spelling each: "mistborn" and "Mistborn" are the same book).
   List<String> get books {
-    final s = <String>{
-      for (final b in _books) b.title,
-      for (final e in _entities)
-        if (e.book != null && bookByTitle(e.book) == null) e.book!,
-    };
-    return s.toList()..sort();
+    final out = <String>[];
+    for (final t in [for (final b in _books) b.title, for (final e in _entities) ?e.book]) {
+      if (t.trim().isNotEmpty && !out.any((o) => sameTitle(o, t))) out.add(t.trim());
+    }
+    return out..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  }
+
+  /// Keeps books and entries in step: books whose titles differ only in
+  /// capitals become one (keeping whichever knows more), every entry's book is
+  /// spelled like its book, and a book an entry names but your list lacks is
+  /// added (with no chapter set yet).
+  Future<void> tidyBooks() async {
+    var changed = false;
+    final keep = <String, Book>{};
+    for (final b in _books) {
+      final k = b.title.trim().toLowerCase();
+      final other = keep[k];
+      if (other == null) {
+        keep[k] = b;
+        continue;
+      }
+      var winner = _richer(other, b);
+      final loser = identical(winner, other) ? b : other;
+      // Keep the nicer spelling ("Mistborn" over "mistborn") whichever copy wins.
+      if (winner.title == winner.title.toLowerCase() && loser.title != loser.title.toLowerCase()) {
+        winner = winner.copyWith(title: loser.title.trim(), updatedAt: nowIso());
+      }
+      keep[k] = winner;
+      _deleted.books[loser.id] = nowIso();
+      changed = true;
+    }
+    _books = keep.values.toList();
+
+    for (final e in _entities.toList()) {
+      final title = e.book?.trim();
+      if (title == null || title.isEmpty) continue;
+      final book = bookByTitle(title);
+      if (book == null) {
+        _books.add(Book(id: _uniqueBookId(title, _books), title: title, updatedAt: nowIso()));
+        changed = true;
+      } else if (book.title != e.book) {
+        await _put(e.copyWith(book: book.title));
+      }
+    }
+    final current = bookByTitle(_settings.currentBook);
+    if (current != null && current.title != _settings.currentBook) {
+      _settings = _settings.copyWith(currentBook: current.title);
+      await _storage?.saveSettings(_settings);
+    }
+    if (changed) {
+      await _storage?.saveDeleted(_deleted);
+      await _saveBooks();
+    }
+  }
+
+  /// Of two copies of one book, the one that knows more about it.
+  static Book _richer(Book a, Book b) {
+    int score(Book x) =>
+        (x.chapter != null ? 4 : 0) + (x.coverId != null ? 2 : 0) + (x.totalChapters != null ? 2 : 0) +
+        (x.author.isNotEmpty ? 1 : 0) + (x.title != x.title.toLowerCase() ? 1 : 0);
+    final sa = score(a), sb = score(b);
+    if (sa != sb) return sa > sb ? a : b;
+    return a.updatedAt.compareTo(b.updatedAt) >= 0 ? a : b;
   }
 
   int get visibleFactCount => _entities.fold(0, (n, e) => n + e.visibleFacts(capFor(e)).length);
@@ -341,6 +400,7 @@ class LibraryStore extends ChangeNotifier {
     final t = title.trim();
     final existing = bookByTitle(t);
     if (existing != null) return existing;
+    if (t.isEmpty) throw ArgumentError('A book needs a title');
     final b = Book(
       id: _uniqueBookId(t, _books),
       title: t,
@@ -369,7 +429,7 @@ class LibraryStore extends ChangeNotifier {
     final old = _books[i];
     _books[i] = b.copyWith(updatedAt: nowIso());
     if (old.title != b.title) {
-      for (final e in _entities.where((e) => e.book == old.title).toList()) {
+      for (final e in _entities.where((e) => sameTitle(e.book, old.title)).toList()) {
         await _put(e.copyWith(book: b.title));
       }
       if (_settings.currentBook == old.title) {
@@ -446,6 +506,7 @@ class LibraryStore extends ChangeNotifier {
       _relationships = [...r.relationships];
       _deleted = r.deleted;
       if (r.books != null) _books = [...r.books!];
+      await tidyBooks();
       final diff = _entities.length - before;
       final change = diff == 0 ? 'no new entries' : (diff > 0 ? '$diff new' : '${-diff} removed');
       return 'Synced: ${_entities.length} entries ($change), ${_relationships.length} links.';

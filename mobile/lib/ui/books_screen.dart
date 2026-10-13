@@ -689,7 +689,7 @@ class BookPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final titles = context.watch<LibraryStore>().books;
-    final v = value != null && titles.contains(value) ? value : null;
+    final v = titles.where((t) => sameTitle(t, value)).firstOrNull;
     return DropdownButtonFormField<String?>(
       initialValue: v,
       isExpanded: true,

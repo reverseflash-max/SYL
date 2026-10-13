@@ -115,7 +115,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final book = store.settings.currentBook;
     final cap = store.spoilerChapter;
     final chapterName = cap == null ? null : store.currentBook?.chapterName(cap);
-    bool inBook(Entity e) => book == null || e.book == null || e.book == book;
+    bool inBook(Entity e) => book == null || e.book == null || sameTitle(e.book, book);
     // Each entry is shielded by its own book's chapter.
     bool pastBookmark(Entity e) {
       final c = store.capFor(e);
