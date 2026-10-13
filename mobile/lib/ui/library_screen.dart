@@ -351,27 +351,27 @@ class _HillsPainter extends CustomPainter {
 
     final deep = Paint()..color = _Night.deep;
     // tower: body, roof, battlements
-    final tx = w * 0.17;
-    const tw = 50.0;
-    canvas.drawRect(Rect.fromLTWH(tx, h * 0.42, tw, h * 0.44), deep);
+    final tx = w * 0.14;
+    const tw = 68.0;
+    canvas.drawRect(Rect.fromLTWH(tx, h * 0.38, tw, h * 0.48), deep);
     canvas.drawPath(
         Path()
-          ..moveTo(tx - 5, h * 0.42)
-          ..lineTo(tx + tw + 5, h * 0.42)
-          ..lineTo(tx + tw, h * 0.37)
-          ..lineTo(tx, h * 0.37)
+          ..moveTo(tx - 5, h * 0.38)
+          ..lineTo(tx + tw + 5, h * 0.38)
+          ..lineTo(tx + tw, h * 0.33)
+          ..lineTo(tx, h * 0.33)
           ..close(),
         deep);
-    for (var i = 0; i < 6; i++) {
-      canvas.drawRect(Rect.fromLTWH(tx - 5 + i * 10.6, h * 0.31, 6, h * 0.06), deep);
+    for (var i = 0; i < 7; i++) {
+      canvas.drawRect(Rect.fromLTWH(tx - 5 + i * 12.3, h * 0.27, 7, h * 0.06), deep);
     }
-    // the lit window, with someone inside reading
-    final win = Rect.fromLTWH(tx + 9, h * 0.46, 32, 38);
-    canvas.drawRRect(
-        RRect.fromRectAndCorners(win, topLeft: const Radius.circular(16), topRight: const Radius.circular(16)),
-        Paint()..color = Syl.accent);
+    // the lit window: a pale moon behind someone reading on the sill
+    final win = Rect.fromLTWH(tx + 10, h * 0.41, 48, 56);
     canvas.save();
-    canvas.clipRect(win);
+    canvas.clipRRect(RRect.fromRectAndCorners(win, topLeft: const Radius.circular(24), topRight: const Radius.circular(24)));
+    canvas.drawRect(win, Paint()..color = Syl.accent);
+    canvas.drawCircle(Offset(win.left + win.width * 0.46, win.top + win.height * 0.38), win.width * 0.28,
+        Paint()..color = const Color(0xFFFFF6D6));
     _reader(canvas, win, Paint()..color = _Night.deep);
     canvas.restore();
     // trees
@@ -394,48 +394,76 @@ class _HillsPainter extends CustomPainter {
     canvas.drawPath(near, deep);
   }
 
-  /// A reader seen side-on, head bowed over a book held up in both hands,
-  /// drawn in a 100 x 100 box fitted to [r].
+  /// A reader seen in profile, sitting on the sill with knees drawn up and a
+  /// book open against them, head bowed over the page. Drawn in a 100 x 104
+  /// box fitted to [r], facing left.
   static void _reader(Canvas canvas, Rect r, Paint p) {
     canvas.save();
     canvas.translate(r.left, r.top);
-    canvas.scale(r.width / 100, r.height / 100);
-    // head, tipped forward towards the page
-    canvas.save();
-    canvas.translate(44, 30);
-    canvas.rotate(0.35);
-    canvas.drawOval(const Rect.fromLTWH(-13, -15, 26, 30), p);
-    canvas.restore();
-    // neck, back and lap
-    canvas.drawPath(
-        Path()
-          ..moveTo(36, 40)
-          ..cubicTo(26, 48, 18, 62, 16, 82)
-          ..lineTo(14, 100)
-          ..lineTo(92, 100)
-          ..cubicTo(90, 92, 80, 86, 66, 84)
-          ..lineTo(60, 66)
-          ..cubicTo(56, 54, 52, 46, 46, 42)
-          ..close(),
-        p);
-    // forearm up to the book
-    canvas.drawPath(
-        Path()
-          ..moveTo(52, 70)
-          ..lineTo(70, 60)
-          ..lineTo(74, 66)
-          ..lineTo(58, 78)
-          ..close(),
-        p);
-    // the open book, tilted up towards the face
-    canvas.drawPath(
-        Path()
-          ..moveTo(62, 46)
-          ..lineTo(78, 40)
-          ..lineTo(88, 62)
-          ..lineTo(72, 70)
-          ..close(),
-        p);
+    canvas.scale(r.width / 100, r.height / 104);
+    canvas
+      // head, bowed: hair over the crown, a fringe falling forward, face in profile
+      ..drawPath(
+          Path()
+            ..moveTo(66, 36)
+            ..cubicTo(70, 28, 70, 19, 63, 14)
+            ..cubicTo(60, 10, 55, 9, 52, 11)
+            ..cubicTo(48, 12, 46, 15, 45, 19)
+            ..cubicTo(44, 21, 42, 23, 41, 25)
+            ..cubicTo(43, 25, 44, 25, 45, 25)
+            ..lineTo(44, 29)
+            ..lineTo(41.5, 33) // nose
+            ..cubicTo(42, 34, 43, 34, 44, 34)
+            ..lineTo(43.8, 36.5) // lips
+            ..lineTo(45, 38.5) // chin
+            ..cubicTo(47, 40.5, 50, 41, 53, 40)
+            ..lineTo(55, 44)
+            ..close(),
+          p)
+      // neck, hunched back, seat, and a raised knee with the shin down to the sill
+      ..drawPath(
+          Path()
+            ..moveTo(55, 43)
+            ..cubicTo(51, 46, 49, 51, 49, 57)
+            ..lineTo(31, 61)
+            ..cubicTo(26, 62, 24, 67, 25, 73)
+            ..lineTo(27, 99)
+            ..lineTo(21, 104)
+            ..lineTo(37, 104)
+            ..cubicTo(36, 94, 36, 86, 37, 80) // back of the calf
+            ..cubicTo(45, 85, 52, 91, 56, 98) // under the thigh
+            ..lineTo(58, 104)
+            ..lineTo(94, 104)
+            ..cubicTo(94, 86, 90, 66, 82, 54)
+            ..cubicTo(76, 45, 70, 39, 64, 36)
+            ..close(),
+          p)
+      // forearm reaching to the book
+      ..drawPath(
+          Path()
+            ..moveTo(50, 54)
+            ..cubicTo(46, 56, 41, 58, 37, 59)
+            ..lineTo(38, 63)
+            ..cubicTo(43, 62, 48, 61, 52, 59)
+            ..close(),
+          p)
+      // the open book against the knee
+      ..drawPath(
+          Path()
+            ..moveTo(25, 47)
+            ..lineTo(41, 41)
+            ..lineTo(47, 57)
+            ..lineTo(31, 63)
+            ..close(),
+          p);
+    // its page edges catch the light
+    final pages = Paint()
+      ..color = Syl.accent
+      ..strokeWidth = 1.4
+      ..style = PaintingStyle.stroke;
+    canvas
+      ..drawLine(const Offset(28, 50.5), const Offset(41.5, 45.5), pages)
+      ..drawLine(const Offset(30, 54.5), const Offset(43, 49.5), pages);
     canvas.restore();
   }
 
