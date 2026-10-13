@@ -8,6 +8,7 @@ import '../models/models.dart';
 import '../state/library_store.dart';
 import '../theme/syl_theme.dart';
 import 'entity_screen.dart';
+import 'home_shell.dart' show NoTabSwipe;
 import 'widgets/common.dart';
 
 /// Visual relationship map. The selected entry sits in the middle, the
@@ -229,7 +230,7 @@ class _GraphState extends State<_Graph> {
     _centreOn(focus.id, c, ringReach + _nodeWidth / 2 + 8, ringReach * 1.15 + 70);
 
     return Stack(children: [
-      InteractiveViewer(
+      NoTabSwipe(child: InteractiveViewer(
         transformationController: widget.controller,
         constrained: false,
         minScale: 0.4,
@@ -249,7 +250,7 @@ class _GraphState extends State<_Graph> {
                 _label(_labelPoint(pos[x.a]!, pos[x.b]!), x.label!, x.a == focus.id || x.b == focus.id),
           ]),
         ),
-      ),
+      )),
       Positioned(
         left: 18,
         right: 18,
