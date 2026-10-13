@@ -151,11 +151,15 @@ class ExternalData {
   final List<String> aliases;
   final List<String> instanceOf;
 
+  /// Spoiler-safe details from Wikidata, as "Label: value" lines.
+  final List<String> safeFacts;
+
   const ExternalData({
     this.wikidataId,
     this.description = '',
     this.aliases = const [],
     this.instanceOf = const [],
+    this.safeFacts = const [],
   });
 
   factory ExternalData.fromJson(Map<String, dynamic>? j) {
@@ -166,6 +170,7 @@ class ExternalData {
       description: _str(j, ['description']),
       aliases: (_pick<List>(j, ['aliases']) ?? const []).map((e) => e.toString()).toList(),
       instanceOf: (_pick<List>(j, ['instance_of']) ?? const []).map((e) => e.toString()).toList(),
+      safeFacts: (_pick<List>(j, ['safe_facts']) ?? const []).map((e) => e.toString()).toList(),
     );
   }
 
@@ -174,6 +179,7 @@ class ExternalData {
         'description': description,
         'aliases': aliases,
         'instance_of': instanceOf,
+        'safe_facts': safeFacts,
       };
 }
 

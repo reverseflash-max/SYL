@@ -34,7 +34,12 @@ LibraryStore sampleLibrary() {
           model: 'qwen3-8b',
           spoilerLimitChapter: 12,
         ),
-        external: const ExternalData(wikidataId: 'Q180322', description: 'fictional character in Middle-earth', aliases: ['Strider']),
+        external: const ExternalData(
+          wikidataId: 'Q180322',
+          description: 'fictional character in Middle-earth',
+          aliases: ['Strider'],
+          safeFacts: ['People: Rangers of the North, Dúnedain', 'World: Tolkien\'s legendarium', 'Speaks: Westron, Sindarin'],
+        ),
         meta: meta('2026-10-03'),
       ),
       Entity(

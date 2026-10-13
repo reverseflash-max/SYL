@@ -77,6 +77,17 @@ class EntityScreen extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text('Also: ${e.external.aliases.join(', ')}', style: TextStyle(fontSize: 13, color: Syl.inkSoft)),
               ],
+              if (e.external.safeFacts.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _SafeFacts(e.external.safeFacts),
+              ] else if (e.external.wikidataId != null) ...[
+                const SizedBox(height: 8),
+                PillButton(
+                  label: busy ? 'Looking up...' : 'Add details from Wikidata',
+                  icon: Icons.travel_explore,
+                  onTap: busy ? null : () => store.linkWikidata(e, e.external.wikidataId!),
+                ),
+              ],
               const SizedBox(height: 18),
               Row(children: [
                 _Stat(value: '${facts.length}', label: facts.length == 1 ? 'fact' : 'facts'),
@@ -122,6 +133,31 @@ class EntityScreen extends StatelessWidget {
   }
 
   static String _capitalise(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+}
+
+/// "People  Dúnedain" lines: who or what this is, from Wikidata, with nothing
+/// that gives the story away.
+class _SafeFacts extends StatelessWidget {
+  const _SafeFacts(this.lines);
+  final List<String> lines;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      for (final line in lines)
+        if (line.split(': ') case [final label, ...final rest])
+          Padding(
+            padding: const EdgeInsets.only(bottom: 3),
+            child: Text.rich(
+              TextSpan(children: [
+                TextSpan(text: '$label  ', style: TextStyle(color: Syl.inkSoft)),
+                TextSpan(text: rest.join(': '), style: const TextStyle(fontWeight: FontWeight.w600)),
+              ]),
+              style: const TextStyle(fontSize: 14, height: 1.3),
+            ),
+          ),
+    ]);
+  }
 }
 
 class _Stat extends StatelessWidget {

@@ -288,6 +288,7 @@ class LibraryStore extends ChangeNotifier {
           description: w.description,
           aliases: {...e.external.aliases, ...w.aliases}.toList()..sort(),
           instanceOf: w.instanceOf,
+          safeFacts: w.safeFacts,
         ),
       );
 

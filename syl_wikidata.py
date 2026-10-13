@@ -3,7 +3,8 @@ Wikidata lookups for SYL.
 
 - search(name)          -> ranked candidates (id, label, description)
 - fetch(qid)            -> the facts SYL keeps: label, description, aliases,
-                           "instance of" labels and a guessed SYL type
+                           "instance of" labels, a guessed SYL type and
+                           spoiler-safe details (SAFE_PROPERTIES)
 - apply_to_entity(...)  -> merge those into an entity WITHOUT touching the
                            user's facts or AI lore
 
@@ -80,6 +81,19 @@ def search(name: str, limit: int = 7, hint: str | None = None) -> list[dict]:
     return results
 
 
+# Properties that say who or what something is without giving the story away.
+# Anything that changes as the story goes on (titles, spouse, children, allies,
+# enemies, what they come to own, later books they appear in) is left out.
+SAFE_PROPERTIES = (
+    ("P172", "People"),        # ethnic group: Dunedain, Hobbits
+    ("P21", "Gender"),
+    ("P1080", "World"),        # from narrative universe: Middle-earth
+    ("P4584", "First appears in"),
+    ("P1412", "Speaks"),
+    ("P170", "Created by"),
+)
+
+
 def _labels(qids: list[str]) -> dict[str, str]:
     if not qids:
         return {}
@@ -104,12 +118,20 @@ def fetch(qid: str) -> dict:
         or next(iter(ent.get("labels", {}).values()), {}).get("value", real_id)
     desc = ent.get("descriptions", {}).get("en", {}).get("value", "")
     aliases = [a["value"] for a in ent.get("aliases", {}).get("en", [])]
-    p31 = []
-    for claim in ent.get("claims", {}).get("P31", []):
-        v = claim.get("mainsnak", {}).get("datavalue", {}).get("value", {})
-        if isinstance(v, dict) and v.get("id"):
-            p31.append(v["id"])
-    instance_labels = list(_labels(p31).values())
+    claims = ent.get("claims", {})
+
+    def ids(prop: str) -> list[str]:
+        out = []
+        for claim in claims.get(prop, []):
+            v = claim.get("mainsnak", {}).get("datavalue", {}).get("value", {})
+            if isinstance(v, dict) and v.get("id"):
+                out.append(v["id"])
+        return out
+
+    p31 = ids("P31")
+    safe = {prop: ids(prop) for prop, _ in SAFE_PROPERTIES}
+    names = _labels(p31 + [q for v in safe.values() for q in v])  # one lookup for all labels
+    instance_labels = [names.get(q, q) for q in p31]
     return {
         "id": real_id,
         "label": label,
@@ -117,6 +139,8 @@ def fetch(qid: str) -> dict:
         "aliases": aliases,
         "instance_of": instance_labels,
         "type": guess_type(instance_labels),
+        "safe_facts": [f"{name}: {', '.join(names.get(q, q) for q in safe[prop])}"
+                       for prop, name in SAFE_PROPERTIES if safe[prop]],
     }
 
 
@@ -127,6 +151,7 @@ def apply_to_entity(entity: dict, wd: dict) -> dict:
     ext["description"] = wd["description"]
     ext["aliases"] = sorted(set(ext.get("aliases", [])) | set(wd["aliases"]))
     ext["instance_of"] = wd["instance_of"]
+    ext["safe_facts"] = wd.get("safe_facts", [])
     if entity.get("type", "Other") == "Other":
         entity["type"] = wd["type"]
     if entity["metadata"].get("source") in (None, "", "manual"):

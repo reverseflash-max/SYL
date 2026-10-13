@@ -19,6 +19,9 @@ class WikidataInfo {
   final List<String> aliases;
   final List<String> instanceOf;
   final String type;
+
+  /// Spoiler-safe details, as "Label: value" lines (see [safeProperties]).
+  final List<String> safeFacts;
   const WikidataInfo({
     required this.id,
     required this.label,
@@ -26,8 +29,22 @@ class WikidataInfo {
     required this.aliases,
     required this.instanceOf,
     required this.type,
+    this.safeFacts = const [],
   });
 }
+
+/// Wikidata properties that describe who or what something is without
+/// giving the story away. Anything that changes as the story goes on
+/// (titles, spouse, children, allies, enemies, what they come to own, which
+/// later books they appear in) is left out on purpose.
+const safeProperties = <(String, String)>[
+  ('P172', 'People'), // ethnic group: Dúnedain, Hobbits
+  ('P21', 'Gender'),
+  ('P1080', 'World'), // from narrative universe: Middle-earth
+  ('P4584', 'First appears in'),
+  ('P1412', 'Speaks'),
+  ('P170', 'Created by'),
+];
 
 class WikidataException implements Exception {
   final String message;
@@ -131,12 +148,16 @@ class WikidataService {
     final aliases = ((ent['aliases'] as Map<String, dynamic>? ?? {})['en'] as List? ?? [])
         .map((a) => (a as Map)['value'].toString())
         .toList();
-    final p31 = <String>[];
-    for (final c in ((ent['claims'] as Map<String, dynamic>? ?? {})['P31'] as List? ?? [])) {
-      final v = (c as Map)['mainsnak']?['datavalue']?['value'];
-      if (v is Map && v['id'] != null) p31.add(v['id'].toString());
-    }
-    final instanceLabels = await _labels(p31);
+    final claims = ent['claims'] as Map<String, dynamic>? ?? {};
+    List<String> ids(String prop) => [
+          for (final c in (claims[prop] as List? ?? []))
+            if ((c as Map)['mainsnak']?['datavalue']?['value'] case {'id': final id}) id.toString(),
+        ];
+    final p31 = ids('P31');
+    final safe = {for (final (prop, _) in safeProperties) prop: ids(prop)};
+    // One lookup for every label we need.
+    final names = await _labelMap([...p31, for (final v in safe.values) ...v]);
+    final instanceLabels = [for (final id in p31) names[id] ?? id];
     return WikidataInfo(
       id: realId,
       label: label,
@@ -144,11 +165,15 @@ class WikidataService {
       aliases: aliases,
       instanceOf: instanceLabels,
       type: guessType(instanceLabels),
+      safeFacts: [
+        for (final (prop, name) in safeProperties)
+          if (safe[prop]!.isNotEmpty) '$name: ${safe[prop]!.map((id) => names[id] ?? id).join(', ')}',
+      ],
     );
   }
 
-  Future<List<String>> _labels(List<String> ids) async {
-    if (ids.isEmpty) return [];
+  Future<Map<String, String>> _labelMap(List<String> ids) async {
+    if (ids.isEmpty) return {};
     final data = await _get(Uri.https(_api, '/w/api.php', {
       'action': 'wbgetentities',
       'ids': ids.take(50).join('|'),
@@ -157,9 +182,9 @@ class WikidataService {
       'format': 'json',
     }));
     final ents = data['entities'] as Map<String, dynamic>? ?? {};
-    return ids
-        .where(ents.containsKey)
-        .map((id) => ((ents[id] as Map)['labels']?['en']?['value'] ?? id).toString())
-        .toList();
+    return {
+      for (final id in ids)
+        if (ents.containsKey(id)) id: ((ents[id] as Map)['labels']?['en']?['value'] ?? id).toString(),
+    };
   }
 }

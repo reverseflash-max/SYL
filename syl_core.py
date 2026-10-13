@@ -213,6 +213,7 @@ def new_entity(name: str, type_: str = "Other", *, entity_id: str | None = None,
             "description": "",
             "aliases": [],
             "instance_of": [],
+            "safe_facts": [],
         },
         "metadata": {
             "first_seen": today(),
@@ -288,6 +289,7 @@ def normalize_entity(raw: dict, fallback_id: str | None = None) -> dict[str, Any
             "description": str(_get(ext_raw, "description", default="")),
             "aliases": list(_get(ext_raw, "aliases", default=[]) or []),
             "instance_of": list(_get(ext_raw, "instance_of", default=[]) or []),
+            "safe_facts": [str(s) for s in (_get(ext_raw, "safe_facts", default=[]) or [])],
         },
         "metadata": {
             "first_seen": str(_get(meta_raw, "first_seen", "firstSeen", default=today()))[:10],
@@ -324,6 +326,7 @@ def merge_entities(base: dict, other: dict) -> dict:
     ext["description"] = ext["description"] or oext["description"]
     ext["aliases"] = sorted(set(ext["aliases"]) | set(oext["aliases"]))
     ext["instance_of"] = sorted(set(ext["instance_of"]) | set(oext["instance_of"]))
+    ext["safe_facts"] = ext.get("safe_facts") or oext.get("safe_facts", [])
     out["metadata"]["first_seen"] = min(base["metadata"]["first_seen"], other["metadata"]["first_seen"])
     out["metadata"]["last_updated"] = now_iso()
     return out
