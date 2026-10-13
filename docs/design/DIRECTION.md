@@ -73,3 +73,24 @@ Why the others lost:
 
 Risk in B to manage: baize reads as "casino" if pushed (no chips, no
 felt texture photo, no gold foil).
+
+## Exploration (round 2)
+
+Feedback on round 1: keep C's constellations, but no cards; the home
+screen should feel book or fantasy-book related. So all three below sit on
+C's night ground with C's constellation Map (shared), and differ only in
+the Library's metaphor. `explore/round2-sheet.png`, `explore/round2.html`.
+
+| | D. Grimoire | E. Ribbon and contents | F. Dramatis personae |
+|---|---|---|---|
+| Concept | SYL is **your grimoire of the book**: each name is written in with its own sigil. | SYL is **the book's contents page**, and your ribbon bookmark marks how far you've read. | SYL is **the cast list** at the front of a fantasy novel, grouped by who travels together. |
+| Type | Fraunces (display serif) + Archivo UI | Newsreader + Archivo UI | Archivo Expanded + Fraunces italic epithets |
+| Accent and its one job | ember: "new this chapter" | ribbon crimson: your chapter | starlight teal: "new this chapter" |
+| Richness | a sigil per entry, drawn as a small constellation from the name | dotted leaders to the chapter where you met them | epithets ("called Strider") and groupings |
+| Signature (spoiler shield) | facts past your chapter are under a wax seal that breaks when you get there | the pages past your ribbon are uncut | lines past your chapter are not yet written |
+
+**Recommended: D, Grimoire.** The constellation sigil ties the home screen
+to the Map (each entry's star on the Map is drawn from the same name), so
+the sky runs through the whole app instead of living on one tab. The wax
+seal is the most tangible spoiler shield of the three. Risk: keep the seal
+the only ornament (no parchment, no gold) so it stays out of fantasy cliché.
