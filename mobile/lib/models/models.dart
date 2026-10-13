@@ -360,8 +360,39 @@ class Relationship {
         'created_at': createdAt,
       };
 
+  /// Same key as syl_core.relationship_key: "source|target|type".
+  String get key => '$source|$target|${type.trim().toLowerCase()}';
+
   bool involves(String id) => source == id || target == id;
   String other(String id) => source == id ? target : source;
+}
+
+/// data/deleted.json: what was deleted and when, so a sync with the PC
+/// doesn't bring it back. Keys: entity id, fact id, [Relationship.key].
+class DeletedLog {
+  final Map<String, String> entities;
+  final Map<String, String> facts;
+  final Map<String, String> relationships;
+
+  DeletedLog({Map<String, String>? entities, Map<String, String>? facts, Map<String, String>? relationships})
+      : entities = entities ?? {},
+        facts = facts ?? {},
+        relationships = relationships ?? {};
+
+  static Map<String, String> _map(Object? v) =>
+      v is Map ? {for (final e in v.entries) e.key.toString(): e.value.toString()} : {};
+
+  factory DeletedLog.fromJson(Map<String, dynamic> j) => DeletedLog(
+        entities: _map(j['entities']),
+        facts: _map(j['facts']),
+        relationships: _map(j['relationships']),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'entities': entities,
+        'facts': facts,
+        'relationships': relationships,
+      };
 }
 
 class AppSettings {
@@ -370,11 +401,19 @@ class AppSettings {
   final String lmStudioUrl;
   final String lmModel;
 
+  /// The PC running `python syl.py serve`, e.g. http://192.168.1.20:8765.
+  final String syncUrl;
+
+  /// Pairing code printed by `syl.py serve`.
+  final String syncCode;
+
   const AppSettings({
     this.currentBook,
     this.spoilerChapter,
     this.lmStudioUrl = 'http://127.0.0.1:1234',
     this.lmModel = '',
+    this.syncUrl = '',
+    this.syncCode = '',
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> j) => AppSettings(
@@ -382,6 +421,8 @@ class AppSettings {
         spoilerChapter: j['spoiler_chapter'] == null ? null : parseChapter(j['spoiler_chapter']),
         lmStudioUrl: _str(j, ['lm_studio_url'], 'http://127.0.0.1:1234'),
         lmModel: _str(j, ['lm_model']),
+        syncUrl: _str(j, ['sync_url']),
+        syncCode: _str(j, ['sync_code']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -389,6 +430,8 @@ class AppSettings {
         'spoiler_chapter': spoilerChapter,
         'lm_studio_url': lmStudioUrl,
         'lm_model': lmModel,
+        'sync_url': syncUrl,
+        'sync_code': syncCode,
       };
 
   AppSettings copyWith({
@@ -398,11 +441,15 @@ class AppSettings {
     bool clearSpoiler = false,
     String? lmStudioUrl,
     String? lmModel,
+    String? syncUrl,
+    String? syncCode,
   }) =>
       AppSettings(
         currentBook: clearBook ? null : (currentBook ?? this.currentBook),
         spoilerChapter: clearSpoiler ? null : (spoilerChapter ?? this.spoilerChapter),
         lmStudioUrl: lmStudioUrl ?? this.lmStudioUrl,
         lmModel: lmModel ?? this.lmModel,
+        syncUrl: syncUrl ?? this.syncUrl,
+        syncCode: syncCode ?? this.syncCode,
       );
 }

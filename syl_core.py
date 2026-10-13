@@ -6,7 +6,8 @@ Every CLI command and the Flutter app use the same layout:
     data/
       entities/<id>.json     one file per entity (schema below)
       relationships.json     list of links between entity ids
-      settings.json          reading progress + LM Studio connection
+      settings.json          reading progress, LM Studio and sync settings
+      deleted.json           what was deleted and when, so a sync can't bring it back
 
 Entity id rules: the Wikidata QID when there is one (Q180322), otherwise a
 slug of the name (frodo-baggins). The id is also stored inside the file.
@@ -37,6 +38,16 @@ Entity schema (schema_version 2), all keys snake_case:
         "status": "active", "source": "wikidata"
       }
     }
+
+deleted.json (tombstones; written by every delete, read by `syl.py serve`):
+
+    {
+      "entities":      {"frodo-baggins": "2026-10-09T12:00:00"},
+      "facts":         {"f_ab12cd34": "2026-10-09T12:00:00"},
+      "relationships": {"Q204274|Q180322|mentor": "2026-10-09T12:00:00"}
+    }
+
+A relationship's key is "source|target|type", with the type lowercased.
 """
 
 from __future__ import annotations
@@ -58,6 +69,7 @@ DATA_DIR = Path(os.environ.get("SYL_DATA_DIR", PROJECT_DIR / "data"))
 ENTITIES_DIR = DATA_DIR / "entities"
 RELATIONSHIPS_FILE = DATA_DIR / "relationships.json"
 SETTINGS_FILE = DATA_DIR / "settings.json"
+DELETED_FILE = DATA_DIR / "deleted.json"
 
 DEFAULT_SETTINGS: dict[str, Any] = {
     "current_book": None,
@@ -67,6 +79,11 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "lm_studio_url": "http://127.0.0.1:1234",
     # Empty means "use whichever model LM Studio has loaded".
     "lm_model": "",
+    # LAN sync (`syl.py serve` on the PC, "Sync with your PC" in the app).
+    # sync_url is the PC's address as the phone sees it; sync_code is the
+    # pairing code both sides must share.
+    "sync_url": "",
+    "sync_code": "",
 }
 
 
@@ -358,6 +375,7 @@ def delete_entity(entity_id: str) -> bool:
     path = entity_path(entity_id)
     if path.exists():
         path.unlink()
+        record_deletion("entities", entity_id)
         return True
     return False
 
@@ -439,7 +457,43 @@ def remove_relationship(source_id: str, target_id: str, type_: str | None = None
     keep = [r for r in rels if not (r["source"] == source_id and r["target"] == target_id
                                    and (type_ is None or r["type"].lower() == type_.lower()))]
     save_relationships(keep)
+    for r in rels:
+        if r not in keep:
+            record_deletion("relationships", relationship_key(r))
     return len(rels) - len(keep)
+
+
+def relationship_key(rel: dict) -> str:
+    return f"{rel['source']}|{rel['target']}|{rel['type'].strip().lower()}"
+
+
+# ---- deletions (tombstones) ------------------------------------------------
+
+DELETED_KINDS = ("entities", "facts", "relationships")
+
+
+def load_deleted() -> dict[str, dict[str, str]]:
+    raw = _read_json(DELETED_FILE, {}) or {}
+    return normalize_deleted(raw)
+
+
+def normalize_deleted(raw: Any) -> dict[str, dict[str, str]]:
+    out: dict[str, dict[str, str]] = {k: {} for k in DELETED_KINDS}
+    if isinstance(raw, dict):
+        for kind in DELETED_KINDS:
+            for key, ts in (raw.get(kind) or {}).items():
+                out[kind][str(key)] = normalize_timestamp(ts)
+    return out
+
+
+def save_deleted(deleted: dict) -> None:
+    _write_json(DELETED_FILE, normalize_deleted(deleted))
+
+
+def record_deletion(kind: str, key: str) -> None:
+    deleted = load_deleted()
+    deleted[kind][key] = now_iso()
+    save_deleted(deleted)
 
 
 # ---- settings / spoiler shield -------------------------------------------

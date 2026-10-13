@@ -72,7 +72,7 @@ class EntityScreen extends StatelessWidget {
               ],
               if (e.external.aliases.isNotEmpty) ...[
                 const SizedBox(height: 4),
-                Text('Also: ${e.external.aliases.join(', ')}', style: const TextStyle(fontSize: 13, color: Syl.muted)),
+                Text('Also: ${e.external.aliases.join(', ')}', style: const TextStyle(fontSize: 13, color: Syl.inkSoft)),
               ],
               const SizedBox(height: 18),
               Row(children: [
@@ -159,9 +159,9 @@ class _LoreCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final lore = entity.lore;
     final button = SizedBox(
-      height: 40,
+      height: 48,
       child: FilledButton(
-        style: FilledButton.styleFrom(backgroundColor: Syl.paper, foregroundColor: Syl.ink, minimumSize: const Size(64, 40)),
+        style: FilledButton.styleFrom(backgroundColor: Syl.paper, foregroundColor: Syl.ink, minimumSize: const Size(64, 48)),
         onPressed: busy || factCount == 0 ? null : () => _generate(context),
         child: busy
             ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))

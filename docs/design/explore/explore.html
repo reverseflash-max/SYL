@@ -1,0 +1,237 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wdth,wght@75..100,400..700&family=Big+Shoulders+Display:wght@500;700;800;900&family=Archivo:wdth,wght@62..125,300..800&display=block" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #DADADA; display: flex; gap: 40px; padding: 40px; align-items: flex-start; }
+  .screen { width: 412px; height: 915px; position: relative; overflow: hidden; flex: none; }
+  .status { height: 36px; display: flex; align-items: center; justify-content: space-between; padding: 0 22px; font: 500 14px/1 "Instrument Sans", sans-serif; }
+  .status .icons { display: flex; gap: 6px; align-items: center; }
+  .gesture { position: absolute; bottom: 8px; left: 50%; width: 108px; height: 4px; margin-left: -54px; border-radius: 2px; }
+  .tnum { font-variant-numeric: tabular-nums; }
+  svg { display: block; }
+
+  /* ---------- A. Field atlas ---------- */
+  .a { --ground:#E4EAEC; --ink:#172126; --ink2:#4B585D; --rule:#C2CCCF; --acc:#D9472B; --acc-text:#B23A21; background: var(--ground); color: var(--ink); font-family: "Instrument Sans", sans-serif; }
+  .a .gesture { background: var(--ink); }
+  .a .top { display:flex; justify-content:space-between; align-items:center; padding: 4px 16px 0 20px; height: 56px; }
+  .a .mark { font: 400 22px "Young Serif", serif; letter-spacing: -0.5px; }
+  .a .iconbtn { width:48px; height:48px; display:grid; place-items:center; }
+  .a .map { position: relative; height: 300px; margin-top: 2px; }
+  .a .title { position:absolute; left:20px; top:8px; right: 20px; }
+  .a .title h1 { font: 400 34px/1.05 "Young Serif", serif; letter-spacing: -0.8px; }
+  .a .here { position:absolute; left: 120px; top: 212px; text-align: right; align-items: flex-end; display:flex; flex-direction:column; gap:2px; }
+  .a .here b { font: 700 13px "Instrument Sans"; color: var(--acc-text); }
+  .a .here span { font: 400 15px "Young Serif", serif; }
+  .a .fogtag { position:absolute; right: 18px; top: 250px; font: italic 400 13px "Instrument Sans"; color: var(--ink2); text-align:right; }
+  .a .tabs { display:flex; gap: 22px; padding: 16px 20px 0; font: 600 15px "Instrument Sans"; color: var(--ink2); border-bottom: 1px solid var(--rule); }
+  .a .tabs div { padding-bottom: 12px; }
+  .a .tabs .on { color: var(--ink); border-bottom: 2px solid var(--ink); }
+  .a .rows { padding: 0 20px; }
+  .a .row { display:grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 14px 0 15px; border-bottom: 1px solid var(--rule); }
+  .a .row h3 { font: 400 22px/1.15 "Young Serif", serif; letter-spacing:-0.3px; }
+  .a .row .ch { font: 500 13px "Instrument Sans"; color: var(--ink2); align-self: center; }
+  .a .row p { grid-column: 1 / -1; font: 400 15px/1.35 "Instrument Sans"; color: var(--ink2); }
+  .a .row .new { color: var(--acc-text); font-weight: 600; }
+  .a .fab { position:absolute; right:16px; bottom: 96px; height: 56px; padding: 0 22px 0 18px; border-radius: 16px; background: var(--ink); color: var(--ground); display:flex; align-items:center; gap:10px; font: 600 16px "Instrument Sans"; box-shadow: 0 6px 16px rgba(23,33,38,.22); }
+  .a .nav { position:absolute; left:0; right:0; bottom:0; height: 80px; padding-bottom: 16px; background: #D7DFE2; display:grid; grid-template-columns: repeat(3,1fr); align-items:center; text-align:center; font: 500 12px "Instrument Sans"; color: var(--ink2); }
+  .a .nav .on { color: var(--ink); font-weight: 700; }
+  .a .nav .pill { width: 56px; height: 30px; margin: 0 auto 4px; border-radius: 15px; display:grid; place-items:center; }
+  .a .nav .on .pill { background: var(--ground); }
+
+  /* ---------- B. Card table ---------- */
+  .b { --ground:#1D4A37; --deep:#163A2B; --ink:#F4F0E6; --ink2:#B9CDBF; --card:#F6F2EA; --cardink:#1B1F1C; --cardink2:#5E6560; --gold:#E7B640; background: var(--ground); color: var(--ink); font-family: "Instrument Sans", sans-serif; }
+  .b .gesture { background: var(--ink); }
+  .b .head { padding: 10px 20px 0; display:flex; justify-content:space-between; align-items:flex-start; }
+  .b .head .book { font: 600 15px "Instrument Sans"; color: var(--ink2); }
+  .b .head h1 { font: 800 76px/0.86 "Big Shoulders Display"; letter-spacing: -0.5px; margin-top: 6px; }
+  .b .head .chname { font: 600 17px "Instrument Sans"; margin-top: 8px; }
+  .b .iconbtn { width:48px; height:48px; display:grid; place-items:center; }
+  .b .hand { position: relative; height: 262px; margin-top: 12px; }
+  .b .card { position:absolute; width: 148px; height: 206px; background: var(--card); color: var(--cardink); border-radius: 12px; padding: 12px; box-shadow: 0 10px 22px rgba(0,0,0,.28); display:flex; flex-direction:column; }
+  .b .card .t { font: 600 12px "Instrument Sans"; color: var(--cardink2); }
+  .b .card h3 { font: 800 27px/0.95 "Big Shoulders Display"; text-transform: uppercase; margin-top: auto; }
+  .b .card p { padding-right: 10px; font: 400 13px/1.3 "Instrument Sans"; color: var(--cardink2); margin-top: 6px; }
+  .b .card .sig { position:absolute; right: 10px; top: 10px; }
+  .b .card .newtag { position:absolute; left:12px; top: -11px; background: var(--gold); color:#2A2205; font: 700 12px "Instrument Sans"; padding: 3px 8px; border-radius: 6px; }
+  .b .back { background: repeating-linear-gradient(45deg, #8F2F2A 0 6px, #7A2722 6px 12px); border: 6px solid var(--card); }
+  .b .back .lbl { margin:auto; background: var(--card); color: var(--cardink); font: 700 13px "Instrument Sans"; padding: 6px 8px; border-radius: 6px; text-align:center; line-height:1.3; }
+  .b .deckhead { display:flex; justify-content:space-between; align-items:baseline; padding: 6px 20px 10px; }
+  .b .deckhead h2 { font: 700 26px "Big Shoulders Display"; }
+  .b .deckhead span { font: 500 14px "Instrument Sans"; color: var(--ink2); }
+  .b .deck { display:grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 20px; }
+  .b .mini { background: var(--card); color: var(--cardink); border-radius: 10px; height: 132px; padding: 10px; position:relative; display:flex; flex-direction:column; }
+  .b .mini h4 { font: 800 21px/0.95 "Big Shoulders Display"; text-transform: uppercase; margin-top:auto; }
+  .b .mini span { font: 500 12px "Instrument Sans"; color: var(--cardink2); margin-top: 4px; }
+  .b .fab { position:absolute; right:16px; bottom: 96px; height: 56px; padding: 0 22px 0 18px; border-radius: 16px; background: var(--gold); color:#2A2205; display:flex; align-items:center; gap:10px; font: 700 16px "Instrument Sans"; box-shadow: 0 6px 16px rgba(0,0,0,.3); }
+  .b .nav { position:absolute; left:0; right:0; bottom:0; height: 80px; padding-bottom: 16px; background: var(--deep); display:grid; grid-template-columns: repeat(3,1fr); align-items:center; text-align:center; font: 500 12px "Instrument Sans"; color: var(--ink2); }
+  .b .nav .on { color: var(--ink); font-weight: 700; }
+  .b .nav .pill { width: 56px; height: 30px; margin: 0 auto 4px; border-radius: 15px; display:grid; place-items:center; }
+  .b .nav .on .pill { background: var(--ground); }
+
+  /* ---------- C. Star chart ---------- */
+  .c { --ground:#0C0F12; --ink:#E9EEEC; --ink2:#93A09E; --ink3:#5E6A69; --rule:#232A2D; --acc:#86D6C6; background: var(--ground); color: var(--ink); font-family: "Archivo", sans-serif; }
+  .c .gesture { background: var(--ink); }
+  .c .top { padding: 8px 16px 0 20px; display:flex; justify-content:space-between; align-items:flex-start; }
+  .c .top h1 { font-weight: 700; font-stretch: 125%; font-size: 27px; line-height: 1.05; letter-spacing: -0.6px; }
+  .c .top .sub { font: 400 15px "Archivo"; color: var(--ink2); margin-top: 6px; }
+  .c .top .sub b { color: var(--acc); font-weight: 600; }
+  .c .iconbtn { width:48px; height:48px; display:grid; place-items:center; }
+  .c .sky { position: relative; height: 318px; margin-top: 6px; }
+  .c .sky .lbl { position:absolute; font-size: 13px; font-weight: 600; font-stretch: 112%; transform: translate(-50%, 0); white-space: nowrap; }
+  .c .sky .lbl small { display:block; font-weight: 400; color: var(--ink2); font-size: 12px; text-align:center; }
+  .c .horizon { position:absolute; left: 0; right: 0; top: 262px; border-top: 1px solid var(--ink3); }
+  .c .horizon span { position:absolute; left: 20px; top: 8px; font-size: 12px; color: var(--ink2); }
+  .c .horizon em { position:absolute; right: 20px; top: 8px; font-size: 12px; color: var(--ink2); font-style: normal; }
+  .c .list { padding: 0 20px; }
+  .c .row { display:grid; grid-template-columns: 22px 1fr auto; align-items:center; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--rule); }
+  .c .row h3 { font-weight: 600; font-stretch: 118%; font-size: 17px; letter-spacing: -0.2px; }
+  .c .row p { font-size: 14px; color: var(--ink2); margin-top: 3px; }
+  .c .row .ch { font-size: 13px; color: var(--ink2); }
+  .c .fab { position:absolute; right:16px; bottom: 96px; height: 56px; padding: 0 22px 0 18px; border-radius: 16px; background: var(--acc); color:#06201B; display:flex; align-items:center; gap:10px; font-weight: 700; font-stretch: 110%; font-size: 16px; }
+  .c .nav { position:absolute; left:0; right:0; bottom:0; height: 80px; padding-bottom: 16px; background: #14191C; display:grid; grid-template-columns: repeat(3,1fr); align-items:center; text-align:center; font-size: 12px; font-weight: 500; color: var(--ink2); }
+  .c .nav .on { color: var(--ink); font-weight: 700; }
+  .c .nav .pill { width: 56px; height: 30px; margin: 0 auto 4px; border-radius: 15px; display:grid; place-items:center; }
+  .c .nav .on .pill { background: #26302F; }
+</style></head>
+<body>
+
+<!-- ======================= A. FIELD ATLAS ======================= -->
+<section class="screen a" data-name="a-field-atlas">
+  <div class="status"><span class="tnum">21:47</span><span class="icons">●●● ▮</span></div>
+  <div class="top"><span class="mark">syl</span>
+    <span class="iconbtn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#172126" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 20 20"/></svg></span></div>
+  <div class="map">
+    <svg width="412" height="300" viewBox="0 0 412 300">
+      <defs>
+        <pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><line x1="0" y1="0" x2="0" y2="7" stroke="#9FAEB3" stroke-width="1.2"/></pattern>
+        <linearGradient id="fogfade" x1="0" x2="1"><stop offset="0" stop-color="#E4EAEC" stop-opacity="0"/><stop offset="0.35" stop-color="#E4EAEC" stop-opacity="0.85"/><stop offset="1" stop-color="#E4EAEC" stop-opacity="0.95"/></linearGradient>
+      </defs>
+      <g fill="none" stroke="#A9B6BA" stroke-width="1">
+        <path d="M-10 120 C 60 90, 120 140, 190 118 S 320 80, 430 110"/>
+        <path d="M-10 138 C 70 110, 130 160, 200 138 S 320 104, 430 130"/>
+        <path d="M-10 158 C 80 132, 140 182, 210 160 S 330 126, 430 152"/>
+        <path d="M40 220 C 90 200, 130 236, 180 226 S 250 190, 300 214"/>
+        <path d="M60 236 C 100 220, 140 250, 186 242 S 250 210, 290 230"/>
+        <ellipse cx="226" cy="186" rx="40" ry="20"/><ellipse cx="226" cy="186" rx="24" ry="11"/><ellipse cx="226" cy="186" rx="9" ry="4"/>
+        <path d="M-10 270 C 80 250, 160 290, 240 268 S 360 246, 430 262"/>
+      </g>
+      <g font-family="Instrument Sans" font-size="12" fill="#4B585D">
+        <circle cx="36" cy="232" r="3" fill="#172126"/><text x="44" y="250">Bag End</text>
+        <circle cx="118" cy="198" r="3" fill="#172126"/><text x="96" y="186">Bree</text>
+      </g>
+      <path d="M36 232 C 70 222, 92 206, 118 198 S 178 176, 222 186" fill="none" stroke="#172126" stroke-width="2" stroke-dasharray="1 6" stroke-linecap="round"/>
+      <path d="M222 186 C 270 196, 320 170, 390 150" fill="none" stroke="#7F8E93" stroke-width="2" stroke-dasharray="1 6" stroke-linecap="round" opacity=".55"/>
+      <rect x="248" y="60" width="170" height="240" fill="url(#hatch)" opacity=".9"/>
+      <rect x="236" y="70" width="190" height="230" fill="url(#fogfade)"/>
+      <g transform="translate(222 186)"><circle r="16" fill="#D9472B" opacity=".18"/><circle r="7" fill="#D9472B"/><circle r="2.6" fill="#E4EAEC"/></g>
+    </svg>
+    <div class="title"><h1>The Lord<br>of the Rings</h1></div>
+    <div class="here"><b>You are here · ch. 12</b><span>Flight to the Ford</span></div>
+    <div class="fogtag">Unsurveyed.<br>Chapters 13 and on stay hidden.</div>
+  </div>
+  <div class="tabs"><div class="on">Everyone 5</div><div>People 3</div><div>Places 1</div><div>Things 1</div></div>
+  <div class="rows">
+    <div class="row"><h3>Frodo Baggins</h3><span class="ch tnum">ch. 1–12</span><p><span class="new">New in ch. 12</span> · Stabbed by a Morgul blade on Weathertop</p></div>
+    <div class="row"><h3>Aragorn</h3><span class="ch tnum">ch. 10–12</span><p><span class="new">New in ch. 12</span> · Heir of Isildur, though he keeps it quiet</p></div>
+    <div class="row"><h3>Gandalf</h3><span class="ch tnum">ch. 1–10</span><p>Leaves a late letter for Frodo with Butterbur</p></div>
+  </div>
+  <div class="fab"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E4EAEC" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Note it down</div>
+  <div class="nav">
+    <div class="on"><div class="pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#172126" stroke-width="2"><path d="M4 5h6v14H4zM14 5h6v14h-6z"/></svg></div>Atlas</div>
+    <div><div class="pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4B585D" stroke-width="2"><circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="9" r="2.5"/><circle cx="11" cy="18" r="2.5"/><path d="M8 8l8 1M7 9l3 7M16.5 11l-4 5"/></svg></div>Map</div>
+    <div><div class="pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4B585D" stroke-width="2"><path d="M7 3v18l5-4 5 4V3z"/></svg></div>Reading</div>
+  </div>
+  <div class="gesture"></div>
+</section>
+
+<!-- ======================= B. CARD TABLE ======================= -->
+<section class="screen b" data-name="b-card-table">
+  <div class="status" style="color:#F4F0E6"><span class="tnum">21:47</span><span class="icons">●●● ▮</span></div>
+  <div class="head">
+    <div><div class="book">The Lord of the Rings</div><h1 class="tnum">Ch. 12</h1><div class="chname">Flight to the Ford</div></div>
+    <span class="iconbtn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F4F0E6" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 20 20"/></svg></span>
+  </div>
+  <div class="hand">
+    <div class="card" style="left:14px; top:34px; transform: rotate(-8deg);"><span class="newtag">New</span><span class="t">Character</span><span class="sig" data-sig="Frodo Baggins"></span><h3>Frodo<br>Baggins</h3><p>Stabbed by a Morgul blade on Weathertop</p></div>
+    <div class="card" style="left:152px; top:16px; transform: rotate(1deg); z-index:2"><span class="newtag">New</span><span class="t">Character</span><span class="sig" data-sig="Aragorn"></span><h3>Aragorn</h3><p>Heir of Isildur, though he keeps it quiet</p></div>
+    <div class="card back" style="left:278px; top:40px; transform: rotate(9deg); width:122px;"><div class="lbl">1 card still<br>face down</div></div>
+  </div>
+  <div class="deckhead"><h2>Your deck</h2><span class="tnum">5 cards · 11 facts</span></div>
+  <div class="deck">
+    <div class="mini"><span class="sig" data-sig="Gandalf" data-size="34"></span><h4>Gandalf</h4><span>2 facts</span></div>
+    <div class="mini"><span class="sig" data-sig="Bree" data-size="34"></span><h4>Bree</h4><span>Place · 1 fact</span></div>
+    <div class="mini"><span class="sig" data-sig="Narsil" data-size="34"></span><h4>Narsil</h4><span>Thing · no facts</span></div>
+  </div>
+  <div class="fab"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2A2205" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Deal a fact</div>
+  <div class="nav">
+    <div class="on"><div class="pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F4F0E6" stroke-width="2"><rect x="4" y="6" width="10" height="14" rx="2"/><path d="M9 4h9a2 2 0 0 1 2 2v12"/></svg></div>Deck</div>
+    <div><div class="pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#B9CDBF" stroke-width="2"><circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="9" r="2.5"/><circle cx="11" cy="18" r="2.5"/><path d="M8 8l8 1M7 9l3 7M16.5 11l-4 5"/></svg></div>Map</div>
+    <div><div class="pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#B9CDBF" stroke-width="2"><path d="M7 3v18l5-4 5 4V3z"/></svg></div>Reading</div>
+  </div>
+  <div class="gesture"></div>
+</section>
+
+<!-- ======================= C. STAR CHART ======================= -->
+<section class="screen c" data-name="c-star-chart">
+  <div class="status" style="color:#E9EEEC"><span class="tnum">21:47</span><span class="icons">●●● ▮</span></div>
+  <div class="top">
+    <div><h1>The Lord<br>of the Rings</h1><div class="sub">Seen up to <b class="tnum">ch. 12</b>, Flight to the Ford</div></div>
+    <span class="iconbtn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E9EEEC" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 20 20"/></svg></span>
+  </div>
+  <div class="sky">
+    <svg width="412" height="318" viewBox="0 0 412 318">
+      <defs><radialGradient id="glow"><stop offset="0" stop-color="#86D6C6" stop-opacity=".55"/><stop offset="1" stop-color="#86D6C6" stop-opacity="0"/></radialGradient>
+        <linearGradient id="below" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0C0F12" stop-opacity="0"/><stop offset="1" stop-color="#0C0F12" stop-opacity=".9"/></linearGradient></defs>
+      <g fill="#5E6A69" id="dust"></g>
+      <g stroke="#86D6C6" stroke-width="1.2" opacity=".75">
+        <line x1="206" y1="118" x2="104" y2="188"/><line x1="206" y1="118" x2="318" y2="170"/><line x1="206" y1="118" x2="150" y2="54"/>
+      </g>
+      <g fill="#E9EEEC">
+        <circle cx="206" cy="118" r="20" fill="url(#glow)"/><circle cx="206" cy="118" r="6.5"/>
+        <circle cx="104" cy="188" r="5.5"/><circle cx="150" cy="54" r="4.5"/>
+        <circle cx="318" cy="170" r="2.6"/><circle cx="300" cy="72" r="3.6" fill="#B8C3C1"/>
+      </g>
+      <circle cx="262" cy="292" r="4" fill="#86D6C6" opacity=".35"/>
+      <rect x="0" y="262" width="412" height="56" fill="url(#below)"/>
+    </svg>
+    <div class="lbl" style="left:212px; top:132px">Aragorn<small>4 facts</small></div>
+    <div class="lbl" style="left:104px; top:204px">Frodo Baggins<small>3 facts</small></div>
+    <div class="lbl" style="left:96px; top:40px">Gandalf<small>2 facts</small></div>
+    <div class="lbl" style="left:318px; top:182px; color:#B8C3C1">Narsil<small>no facts</small></div>
+    <div class="lbl" style="left:300px; top:84px; color:#B8C3C1">Bree<small>1 fact</small></div>
+    <div class="horizon"><span>Horizon · ch. 12</span><em>1 fact below the horizon</em></div>
+  </div>
+  <div class="list">
+    <div class="row"><svg width="22" height="22"><circle cx="11" cy="11" r="6" fill="#E9EEEC"/></svg><div><h3>Aragorn</h3><p>Heir of Isildur, though he keeps it quiet</p></div><span class="ch tnum">10–12</span></div>
+    <div class="row"><svg width="22" height="22"><circle cx="11" cy="11" r="5" fill="#E9EEEC"/></svg><div><h3>Frodo Baggins</h3><p>Stabbed by a Morgul blade on Weathertop</p></div><span class="ch tnum">1–12</span></div>
+    <div class="row"><svg width="22" height="22"><circle cx="11" cy="11" r="4" fill="#E9EEEC"/></svg><div><h3>Gandalf</h3><p>Leaves a late letter for Frodo with Butterbur</p></div><span class="ch tnum">1–10</span></div>
+  </div>
+  <div class="fab"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#06201B" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Chart a fact</div>
+  <div class="nav">
+    <div class="on"><div class="pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E9EEEC" stroke-width="2"><path d="M12 3l2.2 5.6L20 9l-4.5 3.8L17 19l-5-3.2L7 19l1.5-6.2L4 9l5.8-.4z"/></svg></div>Sky</div>
+    <div><div class="pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#93A09E" stroke-width="2"><circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="9" r="2.5"/><circle cx="11" cy="18" r="2.5"/><path d="M8 8l8 1M7 9l3 7M16.5 11l-4 5"/></svg></div>Map</div>
+    <div><div class="pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#93A09E" stroke-width="2"><path d="M7 3v18l5-4 5 4V3z"/></svg></div>Reading</div>
+  </div>
+  <div class="gesture"></div>
+</section>
+
+<script>
+  // A sigil per name: the same name always draws the same mark (B).
+  function hash(s) { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+  function sigil(name, size) {
+    const h = hash(name), r = size / 2, ink = '#1B1F1C', red = '#8F2F2A';
+    const sides = 3 + (h % 4), rot = (h >> 3) % 360, inner = 0.35 + ((h >> 8) % 30) / 100;
+    const pts = n => Array.from({length: n}, (_, i) => { const a = (rot + i * 360 / n) * Math.PI / 180; return [r + Math.cos(a) * r * 0.86, r + Math.sin(a) * r * 0.86]; });
+    const poly = pts(sides).map(p => p.join(',')).join(' ');
+    const rays = (h >> 12) % 2 ? pts(sides).map(([x, y]) => `<line x1="${r}" y1="${r}" x2="${x}" y2="${y}" stroke="${ink}" stroke-width="1.4"/>`).join('') : '';
+    const dot = `<circle cx="${r}" cy="${r}" r="${r * inner * 0.5}" fill="${(h >> 16) % 2 ? red : ink}"/>`;
+    return `<svg width="${size}" height="${size}"><polygon points="${poly}" fill="none" stroke="${ink}" stroke-width="1.6"/>${rays}<circle cx="${r}" cy="${r}" r="${r * inner}" fill="none" stroke="${ink}" stroke-width="1.2"/>${dot}</svg>`;
+  }
+  document.querySelectorAll('[data-sig]').forEach(el => el.innerHTML = sigil(el.dataset.sig, +(el.dataset.size || 40)));
+  // Faint background stars (C).
+  const dust = document.getElementById('dust'); let s = 7;
+  const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 70; i++) dust.insertAdjacentHTML('beforeend', `<circle cx="${rnd() * 412}" cy="${rnd() * 255}" r="${0.5 + rnd() * 0.9}" opacity="${0.3 + rnd() * 0.5}"/>`);
+</script>
+</body></html>

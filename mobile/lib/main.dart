@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import 'state/library_store.dart';
@@ -6,6 +7,8 @@ import 'theme/syl_theme.dart';
 import 'ui/home_shell.dart';
 
 void main() {
+  // The font ships in assets/fonts; never fetch it from the internet.
+  GoogleFonts.config.allowRuntimeFetching = false;
   runApp(const SylApp());
 }
 

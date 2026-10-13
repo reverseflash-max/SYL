@@ -21,15 +21,22 @@ class RoundIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: background,
-        shape: const CircleBorder(),
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: onPressed,
-          child: SizedBox(width: 44, height: 44, child: Icon(icon, size: 21, color: foreground, semanticLabel: tooltip)),
+    // Its own button node, so screen readers don't merge it with text beside it.
+    return Semantics(
+      container: true,
+      button: true,
+      enabled: onPressed != null,
+      child: Tooltip(
+        message: tooltip,
+        child: Material(
+          color: background,
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onPressed,
+            // 48dp: Android's minimum tap target.
+            child: SizedBox(width: 48, height: 48, child: Icon(icon, size: 22, color: foreground, semanticLabel: tooltip)),
+          ),
         ),
       ),
     );
@@ -85,7 +92,7 @@ class FilterPill extends StatelessWidget {
         customBorder: const StadiumBorder(),
         onTap: onTap,
         child: Container(
-          height: 40,
+          height: 48,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             if (dot != null) ...[
@@ -122,7 +129,7 @@ class ChapterBadge extends StatelessWidget {
       height: 44,
       decoration: BoxDecoration(color: color ?? Syl.mint, borderRadius: Syl.r14),
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        const Text('CH', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w500, height: 1)),
+        const Text('CH', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, height: 1)),
         Text('$chapter', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, height: 1.1)),
       ]),
     );
@@ -180,7 +187,7 @@ class PillButton extends StatelessWidget {
         customBorder: const StadiumBorder(),
         onTap: onTap,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 40),
+          constraints: const BoxConstraints(minHeight: 48),
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             if (icon != null) ...[Icon(icon, size: 18, color: fg), const SizedBox(width: 6)],

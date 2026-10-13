@@ -100,7 +100,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               const SizedBox(height: 16),
             ],
             SizedBox(
-              height: 40,
+              height: 48,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: _filters.length,
