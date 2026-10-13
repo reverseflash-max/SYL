@@ -526,6 +526,7 @@ def normalize_book(raw: Any) -> dict[str, Any] | None:
         "status": status if status in BOOK_STATUSES else "reading",
         "rating": int(rating) if isinstance(rating, (int, float)) and 1 <= rating <= 5 else None,
         "open_library_key": _get(raw, "open_library_key"),
+        "cover_id": int(_get(raw, "cover_id")) if isinstance(_get(raw, "cover_id"), (int, float)) else None,
         "updated_at": normalize_timestamp(_get(raw, "updated_at")),
     }
 

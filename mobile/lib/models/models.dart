@@ -397,6 +397,9 @@ class Book {
   /// 1 to 5 stars, once you've rated it.
   final int? rating;
   final String? openLibraryKey;
+
+  /// Open Library cover id: the image is [coverUrl].
+  final int? coverId;
   final String updatedAt;
 
   const Book({
@@ -409,8 +412,11 @@ class Book {
     this.status = 'reading',
     this.rating,
     this.openLibraryKey,
+    this.coverId,
     this.updatedAt = '',
   });
+
+  String? get coverUrl => coverId == null ? null : 'https://covers.openlibrary.org/b/id/$coverId-M.jpg';
 
   static const statuses = ['reading', 'want', 'finished'];
 
@@ -432,6 +438,7 @@ class Book {
       status: statuses.contains(status) ? status : 'reading',
       rating: rating != null && rating >= 1 && rating <= 5 ? rating : null,
       openLibraryKey: _pick<String>(j, ['open_library_key']),
+      coverId: j['cover_id'] is num ? (j['cover_id'] as num).toInt() : null,
       updatedAt: _str(j, ['updated_at']),
     );
   }
@@ -446,6 +453,7 @@ class Book {
         'status': status,
         'rating': rating,
         'open_library_key': openLibraryKey,
+        'cover_id': coverId,
         'updated_at': updatedAt,
       };
 
@@ -461,6 +469,7 @@ class Book {
     int? rating,
     bool clearRating = false,
     String? openLibraryKey,
+    int? coverId,
     String? updatedAt,
   }) =>
       Book(
@@ -473,6 +482,7 @@ class Book {
         status: status ?? this.status,
         rating: clearRating ? null : (rating ?? this.rating),
         openLibraryKey: openLibraryKey ?? this.openLibraryKey,
+        coverId: coverId ?? this.coverId,
         updatedAt: updatedAt ?? this.updatedAt,
       );
 }

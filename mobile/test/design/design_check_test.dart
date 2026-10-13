@@ -89,7 +89,11 @@ final scenarios = <Scenario>[
   }),
   Scenario('11-book-sheet', (t) async {
     await _tapNav(t, Icons.menu_book_outlined);
-    await t.tap(find.text('Mistborn: The Final Empire'));
+    // (the title shows twice: on the card and on its placeholder cover)
+    final card = find.text('Mistborn: The Final Empire').first;
+    await t.ensureVisible(card);
+    await t.pumpAndSettle();
+    await t.tap(card);
     await t.pumpAndSettle();
   }),
 ];

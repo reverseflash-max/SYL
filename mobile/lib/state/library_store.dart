@@ -336,6 +336,7 @@ class LibraryStore extends ChangeNotifier {
     int? chapter,
     String status = 'reading',
     String? openLibraryKey,
+    int? coverId,
   }) async {
     final t = title.trim();
     final existing = bookByTitle(t);
@@ -349,6 +350,7 @@ class LibraryStore extends ChangeNotifier {
       chapter: chapter,
       status: status,
       openLibraryKey: openLibraryKey,
+      coverId: coverId,
       updatedAt: nowIso(),
     );
     _books.add(b);
@@ -376,6 +378,21 @@ class LibraryStore extends ChangeNotifier {
       }
     }
     await _saveBooks();
+  }
+
+  final Set<String> _coverTried = {};
+
+  /// Finds a cover on Open Library for a book that has none yet (once per
+  /// book per session, and quietly: no connection just means no cover).
+  Future<void> findCover(Book b) async {
+    if (b.coverId != null || _memoryOnly || !_coverTried.add(b.id)) return;
+    try {
+      final q = b.author.isEmpty ? b.title : '${b.title} ${b.author}';
+      final hit = (await openLibrary.search(q)).where((h) => h.coverId != null).firstOrNull;
+      final current = _books.where((x) => x.id == b.id).firstOrNull;
+      if (hit == null || current == null) return;
+      await updateBook(current.copyWith(coverId: hit.coverId, openLibraryKey: current.openLibraryKey ?? hit.key));
+    } catch (_) {}
   }
 
   /// Moves your place in a book (null turns its spoiler shield off).

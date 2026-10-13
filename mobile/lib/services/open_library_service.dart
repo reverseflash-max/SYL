@@ -11,7 +11,8 @@ class OpenLibraryBook {
   final String title;
   final String author;
   final int? year;
-  const OpenLibraryBook(this.key, this.title, this.author, this.year);
+  final int? coverId;
+  const OpenLibraryBook(this.key, this.title, this.author, this.year, [this.coverId]);
 }
 
 class OpenLibraryException implements Exception {
@@ -44,7 +45,7 @@ class OpenLibraryService {
     final data = await _get(Uri.https(_host, '/search.json', {
       'q': query,
       'limit': '8',
-      'fields': 'key,title,author_name,first_publish_year',
+      'fields': 'key,title,author_name,first_publish_year,cover_i',
     }));
     return [
       for (final d in (data['docs'] as List? ?? []).whereType<Map<String, dynamic>>())
@@ -54,6 +55,7 @@ class OpenLibraryService {
             d['title'].toString(),
             ((d['author_name'] as List?) ?? const []).take(2).join(', '),
             (d['first_publish_year'] as num?)?.toInt(),
+            (d['cover_i'] as num?)?.toInt(),
           ),
     ];
   }
