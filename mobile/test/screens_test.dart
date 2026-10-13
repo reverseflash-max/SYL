@@ -49,7 +49,7 @@ void main() {
     expect(find.text('Library'), findsWidgets);
     expect(find.text('Galadriel'), findsOneWidget);
     expect(find.text('Aragorn'), findsOneWidget);
-    expect(find.textContaining('Ch. 5'), findsWidgets);
+    expect(find.textContaining('ch. 5'), findsWidgets);
 
     // Entity screen: facts, spoiler hiding, link, mention
     await tester.tap(find.text('Aragorn'));

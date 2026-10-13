@@ -21,6 +21,18 @@ class Syl {
 
   static const danger = Color(0xFFB3261E);
 
+  /// Library header: navy book cloth, and the stamp purple that marks your chapter.
+  static const cloth = Color(0xFF22314D);
+  static const onCloth = Color(0xFFE6E9F0);
+  static const onClothMuted = Color(0xFFA3AECA);
+  static const stamp = Color(0xFF5B3F8C);
+
+  /// Libre Caslon Text, for book titles and index names.
+  static TextStyle serif(BuildContext context,
+          {double? fontSize, FontWeight? fontWeight, FontStyle? fontStyle, Color? color, double? height, double? letterSpacing}) =>
+      Theme.of(context).extension<SylSerif>()!.style(
+          fontSize: fontSize, fontWeight: fontWeight, fontStyle: fontStyle, color: color, height: height, letterSpacing: letterSpacing);
+
   /// Dot colour for each type (filter chips, labels).
   /// Category dots carry meaning, so each is dark enough to read on white and on the pastels.
   static Color typeDot(String type) => switch (type) {
@@ -63,6 +75,7 @@ class Syl {
     final text = (googleFonts ? GoogleFonts.bricolageGrotesqueTextTheme(base.textTheme) : base.textTheme)
         .apply(bodyColor: ink, displayColor: ink);
     return base.copyWith(
+      extensions: [SylSerif(googleFonts: googleFonts)],
       textTheme: text.copyWith(
         displaySmall: text.displaySmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -1.5, height: 0.95),
         headlineMedium: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.8),
@@ -119,4 +132,25 @@ class Syl {
       progressIndicatorTheme: const ProgressIndicatorThemeData(color: ink),
     );
   }
+}
+
+/// The serif face. google_fonts picks the file by weight and style, so each
+/// variant is asked for by name rather than by copying one style.
+class SylSerif extends ThemeExtension<SylSerif> {
+  const SylSerif({this.googleFonts = true});
+  final bool googleFonts;
+
+  TextStyle style({double? fontSize, FontWeight? fontWeight, FontStyle? fontStyle, Color? color, double? height, double? letterSpacing}) =>
+      googleFonts
+          ? GoogleFonts.libreCaslonText(
+              fontSize: fontSize, fontWeight: fontWeight, fontStyle: fontStyle, color: color, height: height, letterSpacing: letterSpacing)
+          : TextStyle(
+              fontFamily: 'Libre Caslon Text',
+              fontSize: fontSize, fontWeight: fontWeight, fontStyle: fontStyle, color: color, height: height, letterSpacing: letterSpacing);
+
+  @override
+  SylSerif copyWith({bool? googleFonts}) => SylSerif(googleFonts: googleFonts ?? this.googleFonts);
+
+  @override
+  SylSerif lerp(SylSerif? other, double t) => this;
 }
