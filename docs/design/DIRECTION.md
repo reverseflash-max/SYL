@@ -94,3 +94,30 @@ to the Map (each entry's star on the Map is drawn from the same name), so
 the sky runs through the whole app instead of living on one tab. The wax
 seal is the most tangible spoiler shield of the three. Risk: keep the seal
 the only ornament (no parchment, no gold) so it stays out of fantasy cliché.
+
+## Exploration (round 3)
+
+Feedback on round 2: the constellation look is only for the Map tab; the
+rest of the app shouldn't be star-themed. Keep it book or fantasy-book
+related. The Map stays as in round 2. `explore/round3-sheet.png`,
+`explore/round3.html`.
+
+| | G. Illuminated chronicle | H. Library hardback | I. Traveller's journal |
+|---|---|---|---|
+| Concept | SYL is **a scribe's chronicle** of the book. | SYL is **your own library copy**: a cloth cover, a checkout slip, and an index at the back. | SYL is **the field notebook** of someone travelling through the story. |
+| Ground | light vellum | navy book cloth, with the index on a page | dot-grid notebook paper |
+| Type | EB Garamond | Libre Caslon + Courier Prime stamps | Literata + Caveat handwriting |
+| Accent and its one job | rubric red: "new this chapter" | stamp purple: your chapter and "new" | pen blue: your own notes |
+| Richness | an illuminated initial on every entry, chapters in roman numerals | blind-stamped title, the slip stamped at each chapter you reach | taped chapter tag, circled "new", margin notes |
+| Signature (spoiler shield) | an initial the scribe hasn't painted yet | the rest of the index is clasped shut | the page is folded over |
+
+**Recommended: H, Library hardback.** An index is already what you reach
+for when you ask "who is this again?" It's alphabetical and gives the chapter
+references, so the metaphor makes lookup better rather than just decorating it. The
+checkout slip, stamped at each chapter you reach, is a natural "you are
+here", and the clasp gives the spoiler shield something to hold. The
+navy cloth also sits well next to the dark constellation Map.
+
+Why the others lost: G's illuminated initial splits each name ("rodo
+Baggins"), which slows scanning. I is charming, but the handwritten type
+gets hard to read once notes are long.
