@@ -99,6 +99,14 @@ GitHub Actions builds the app on every push that changes `mobile/` and publishes
 
 The APK is signed with the key in the repository secrets `SYL_KEYSTORE_BASE64` (the keystore file, base64) and `SYL_KEYSTORE_PASSWORD`. Keep a private backup of the keystore: a new key means the next update can't install over the old app.
 
+## Credits
+
+SYL is Vikram Pandian's project. The foundation of the app (the first
+version of the Flutter app and the Python CLI) was built with Qwen 3.5.
+Later work, including the phone and PC sync, the APK builds, the design and
+the Books tab, was done with Claude, which is why Claude appears as a
+co-author on those commits.
+
 ## License
 
 MIT, see [LICENSE](LICENSE).
