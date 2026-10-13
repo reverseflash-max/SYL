@@ -29,7 +29,7 @@ class _Edge {
 
 class _MapScreenState extends State<MapScreen> {
   String? _focusId;
-  String? _book; // null = all books
+  String? _book; // the book on the map; null = entries with no book
   bool _bookInit = false;
   final _viewer = TransformationController();
 
@@ -42,11 +42,14 @@ class _MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     final store = context.watch<LibraryStore>();
-    if (!_bookInit) {
-      _book = store.settings.currentBook;
+    // One book at a time; entries without a book get their own "No book" choice.
+    final choices = <String?>[...store.books, if (store.entities.any((e) => e.book == null)) null];
+    if (!_bookInit || !choices.contains(_book)) {
+      final current = store.settings.currentBook;
+      _book = choices.contains(current) || choices.isEmpty ? current : choices.first;
       _bookInit = true;
     }
-    final ents = store.entities.where((e) => _book == null || e.book == _book).toList();
+    final ents = store.entities.where((e) => e.book == _book).toList();
     final ids = {for (final e in ents) e.id};
 
     // edges
@@ -80,23 +83,28 @@ class _MapScreenState extends State<MapScreen> {
             Text('Map', style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 44)),
             const SizedBox(height: 4),
             Text(
-              '${_book ?? 'All books'}${store.spoilerChapter != null ? ' · to ch. ${store.spoilerChapter}' : ''}',
+              '${_book ?? 'No book'}${store.spoilerChapter != null ? ' · to ch. ${store.spoilerChapter}' : ''}',
               style: const TextStyle(fontSize: 14, color: Syl.muted),
             ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 40,
-              child: ListView(scrollDirection: Axis.horizontal, children: [
-                FilterPill(label: 'All books', selected: _book == null, onTap: () => setState(() => _book = null)),
-                for (final b in store.books) ...[
-                  const SizedBox(width: 8),
-                  FilterPill(label: b, selected: _book == b, onTap: () => setState(() {
-                    _book = b;
-                    _focusId = null;
-                  })),
-                ],
-              ]),
-            ),
+            if (choices.length > 1) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 40,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: choices.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (_, i) => FilterPill(
+                    label: choices[i] ?? 'No book',
+                    selected: _book == choices[i],
+                    onTap: () => setState(() {
+                      _book = choices[i];
+                      _focusId = null;
+                    }),
+                  ),
+                ),
+              ),
+            ],
           ]),
         ),
         Expanded(
