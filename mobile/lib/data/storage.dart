@@ -11,6 +11,7 @@ import '../models/models.dart';
 ///   data/relationships.json
 ///   data/settings.json
 ///   data/deleted.json   (tombstones for sync, see syl_core.py)
+///   data/books.json     (your books, each with its own chapter)
 ///
 /// Where the folder lives:
 ///  1. the SYL_DATA_DIR environment variable, if set (desktop);
@@ -46,6 +47,7 @@ class SylStorage {
   File get _relationshipsFile => File(_join(root.path, 'relationships.json'));
   File get _settingsFile => File(_join(root.path, 'settings.json'));
   File get _deletedFile => File(_join(root.path, 'deleted.json'));
+  File get _booksFile => File(_join(root.path, 'books.json'));
 
   static String _join(String a, String b) =>
       a.endsWith(Platform.pathSeparator) ? '$a$b' : '$a${Platform.pathSeparator}$b';
@@ -126,6 +128,21 @@ class SylStorage {
 
   Future<void> saveSettings(AppSettings s) => _writeJson(_settingsFile, s.toJson());
 
+  // ---- books ----------------------------------------------------------------
+
+  /// Null when there is no books file yet (an older library: see LibraryStore.load).
+  Future<List<Book>?> loadBooks() async {
+    if (!await _booksFile.exists()) return null;
+    try {
+      final list = jsonDecode(await _booksFile.readAsString()) as List;
+      return list.whereType<Map<String, dynamic>>().map(Book.fromJson).where((b) => b.title.isNotEmpty).toList();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> saveBooks(List<Book> books) => _writeJson(_booksFile, books.map((b) => b.toJson()).toList());
+
   // ---- deletions (for sync) ------------------------------------------------
 
   Future<DeletedLog> loadDeleted() async {
@@ -143,7 +160,7 @@ class SylStorage {
 
   /// Replace the library with what the PC sent back after a sync. The
   /// previous copy is kept in data/_sync_backup/ until the next sync.
-  Future<void> replaceLibrary(List<Entity> entities, List<Relationship> rels, DeletedLog deleted) async {
+  Future<void> replaceLibrary(List<Entity> entities, List<Relationship> rels, DeletedLog deleted, {List<Book>? books}) async {
     final backup = Directory(_join(root.path, '_sync_backup'));
     if (await backup.exists()) await backup.delete(recursive: true);
     final backupEntities = Directory(_join(backup.path, 'entities'));
@@ -153,7 +170,7 @@ class SylStorage {
         await f.copy(_join(backupEntities.path, f.uri.pathSegments.last));
       }
     }
-    for (final f in [_relationshipsFile, _deletedFile]) {
+    for (final f in [_relationshipsFile, _deletedFile, _booksFile]) {
       if (await f.exists()) await f.copy(_join(backup.path, f.uri.pathSegments.last));
     }
 
@@ -169,6 +186,7 @@ class SylStorage {
     }
     await saveRelationships(rels);
     await saveDeleted(deleted);
+    if (books != null) await saveBooks(books);
   }
 
   // ---- helpers ------------------------------------------------------------
@@ -189,7 +207,7 @@ class SylStorage {
     await for (final f in root.list()) {
       if (f is! File || !f.path.endsWith('.json')) continue;
       final name = f.uri.pathSegments.last;
-      if (name == 'relationships.json' || name == 'settings.json' || name == 'deleted.json') continue;
+      if (const {'relationships.json', 'settings.json', 'deleted.json', 'books.json'}.contains(name)) continue;
       try {
         final j = jsonDecode(await f.readAsString()) as Map<String, dynamic>;
         final e = Entity.fromJson(j, fallbackId: name.replaceAll('.json', ''));

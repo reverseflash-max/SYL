@@ -18,7 +18,7 @@ class EntityScreen extends StatelessWidget {
     if (e == null) {
       return Scaffold(appBar: AppBar(), body: const Center(child: Text('This entry no longer exists.')));
     }
-    final cap = store.spoilerChapter;
+    final cap = store.capFor(e);
     final facts = e.visibleFacts(cap);
     final hidden = e.facts.length - facts.length;
     final links = store.linksFor(e.id);

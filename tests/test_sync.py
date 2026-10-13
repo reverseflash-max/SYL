@@ -102,6 +102,28 @@ class MergeTests(unittest.TestCase):
         self.assertEqual(syl_sync.merge_libraries(a, b), syl_sync.merge_libraries(b, a))
 
 
+def book(bid, title, chapter, updated):
+    return {"id": bid, "title": title, "chapter": chapter, "status": "reading", "updated_at": updated}
+
+
+class BookMergeTests(unittest.TestCase):
+    def test_newer_chapter_wins_and_both_sides_books_are_kept(self):
+        pc = {**lib(), "books": [book("lotr", "The Lord of the Rings", 10, "2026-10-01T10:00:00")]}
+        phone = {**lib(), "books": [book("lotr", "The Lord of the Rings", 12, "2026-10-02T10:00:00"),
+                                    book("mistborn", "Mistborn", 3, "2026-10-02T10:00:00")]}
+        out = syl_sync.merge_libraries(pc, phone)
+        self.assertEqual([(b["id"], b["chapter"]) for b in out["books"]], [("mistborn", 3), ("lotr", 12)])
+
+    def test_deleted_book_stays_deleted(self):
+        pc = {**lib(), "books": [book("lotr", "The Lord of the Rings", 10, "2026-10-01T10:00:00")]}
+        phone = lib(deleted={"books": {"lotr": "2026-10-02T10:00:00"}})
+        self.assertEqual(syl_sync.merge_libraries(pc, phone)["books"], [])
+
+    def test_an_older_app_without_books_keeps_the_pcs(self):
+        pc = {**lib(), "books": [book("lotr", "The Lord of the Rings", 10, "2026-10-01T10:00:00")]}
+        self.assertEqual(len(syl_sync.merge_libraries(pc, lib())["books"]), 1)
+
+
 class CoreTombstoneTests(unittest.TestCase):
     def setUp(self):
         for f in Path(_TMP.name).rglob("*.json"):

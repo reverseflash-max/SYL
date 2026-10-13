@@ -60,9 +60,11 @@ final scenarios = <Scenario>[
     await t.pumpAndSettle();
   }),
   Scenario('3-map', (t) => _tapNav(t, Icons.hub_outlined)),
-  Scenario('4-reading', (t) => _tapNav(t, Icons.menu_book_outlined)),
+  Scenario('4-books', (t) => _tapNav(t, Icons.menu_book_outlined)),
   Scenario('5-quick-add', (t) async {
-    await t.tap(find.byTooltip('Add a fact'));
+    await t.tap(find.byTooltip('Add'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('New fact'));
     await t.pumpAndSettle();
   }),
   Scenario('6-new-entry', (t) async {
@@ -74,6 +76,22 @@ final scenarios = <Scenario>[
     expect(find.byType(NewEntityScreen), findsOneWidget);
   }),
   Scenario('7-empty-library', (t) async {}, store: LibraryStore.memory),
+  Scenario('8-settings', (t) => _tapNav(t, Icons.tune)),
+  Scenario('9-add-menu', (t) async {
+    await t.tap(find.byTooltip('Add'));
+    await t.pumpAndSettle();
+  }),
+  Scenario('10-new-book', (t) async {
+    await t.tap(find.byTooltip('Add'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('New book'));
+    await t.pumpAndSettle();
+  }),
+  Scenario('11-book-sheet', (t) async {
+    await _tapNav(t, Icons.menu_book_outlined);
+    await t.tap(find.text('Mistborn: The Final Empire'));
+    await t.pumpAndSettle();
+  }),
 ];
 
 /// Text below this size (in logical pixels, before the user's text scaling) fails.

@@ -71,7 +71,8 @@ class _MapScreenState extends State<MapScreen> {
     final edges = <_Edge>[];
     for (final r in store.relationships) {
       if (!ids.contains(r.source) || !ids.contains(r.target)) continue;
-      if (store.spoilerChapter != null && r.chapter != null && r.chapter! > store.spoilerChapter!) continue;
+      final shield = store.chapterFor(_book);
+      if (shield != null && r.chapter != null && r.chapter! > shield) continue;
       edges.add(_Edge(r.source, r.target, r.type, false));
     }
     for (final e in ents) {
@@ -89,7 +90,7 @@ class _MapScreenState extends State<MapScreen> {
       focus = (ents.toList()..sort((a, b) => degree[b.id]!.compareTo(degree[a.id]!))).first;
     }
 
-    final cap = store.spoilerChapter;
+    final cap = store.chapterFor(_book);
     final below = cap == null
         ? 0
         : store.relationships.where((r) => ids.contains(r.source) && ids.contains(r.target) && (r.chapter ?? 0) > cap).length;
@@ -266,7 +267,20 @@ class _Graph extends StatefulWidget {
   State<_Graph> createState() => _GraphState();
 }
 
-class _GraphState extends State<_Graph> with SingleTickerProviderStateMixin {
+class _GraphState extends State<_Graph> with TickerProviderStateMixin {
+  /// The view that frames the selected star; Recenter glides back to it.
+  Matrix4? _home;
+  late final AnimationController _glide = AnimationController(vsync: this, duration: const Duration(milliseconds: 450));
+  Animation<Matrix4>? _glideTo;
+
+  void _recenter() {
+    final home = _home;
+    if (home == null) return;
+    _glideTo = Matrix4Tween(begin: widget.controller.value.clone(), end: home)
+        .animate(CurvedAnimation(parent: _glide, curve: Curves.easeOutCubic));
+    _glide.forward(from: 0);
+  }
+
   /// Stars glide from where they were to where they now belong when you pick
   /// another one; a star that wasn't there before rises into place.
   late final AnimationController _move = AnimationController(vsync: this, duration: const Duration(milliseconds: 550))
@@ -274,8 +288,17 @@ class _GraphState extends State<_Graph> with SingleTickerProviderStateMixin {
   Map<String, Offset> _from = {}, _to = {};
 
   @override
+  void initState() {
+    super.initState();
+    _glide.addListener(() {
+      if (_glideTo != null) widget.controller.value = _glideTo!.value;
+    });
+  }
+
+  @override
   void dispose() {
     _move.dispose();
+    _glide.dispose();
     super.dispose();
   }
 
@@ -314,12 +337,13 @@ class _GraphState extends State<_Graph> with SingleTickerProviderStateMixin {
     final scale = math.min(1.0, math.min(widget.size.width / 2 / reachX, visibleH / 2 / reachY)).clamp(0.6, 1.0);
     if (_centred == (id, point, scale)) return;
     _centred = (id, point, scale);
+    _home = Matrix4.identity()
+      ..translateByDouble(widget.size.width / 2, visibleH / 2, 0, 1)
+      ..scaleByDouble(scale, scale, 1, 1)
+      ..translateByDouble(-point.dx, -point.dy, 0, 1);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      widget.controller.value = Matrix4.identity()
-        ..translateByDouble(widget.size.width / 2, visibleH / 2, 0, 1)
-        ..scaleByDouble(scale, scale, 1, 1)
-        ..translateByDouble(-point.dx, -point.dy, 0, 1);
+      widget.controller.value = _home!.clone();
     });
   }
 
@@ -386,7 +410,7 @@ class _GraphState extends State<_Graph> with SingleTickerProviderStateMixin {
                 Positioned.fill(child: CustomPaint(painter: _EdgePainter(edges: edges, pos: at, focus: focus.id))),
                 for (final e in widget.entities)
                   if (at[e.id] != null)
-                    _node(at[e.id]!, e, e.id == focus.id, e.visibleFacts(store.spoilerChapter).length, unlinked.contains(e.id),
+                    _node(at[e.id]!, e, e.id == focus.id, e.visibleFacts(store.capFor(e)).length, unlinked.contains(e.id),
                         rise: risen.isEmpty || risen.contains(e.id) ? 1 : t),
                 // Labels last, so a node can never hide them.
                 for (final x in edges)
@@ -397,6 +421,28 @@ class _GraphState extends State<_Graph> with SingleTickerProviderStateMixin {
           ),
         ),
       )),
+      // Below the horizon the sky doesn't pan, so a sideways swipe there
+      // moves to the next tab, as it does on every other page.
+      Positioned(
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: 214,
+        child: Listener(behavior: HitTestBehavior.opaque),
+      ),
+      Positioned(
+        top: 8,
+        right: 14,
+        child: Material(
+          color: _Sky.card,
+          shape: const CircleBorder(side: BorderSide(color: Color(0xFF3A4270))),
+          child: IconButton(
+            tooltip: 'Recenter',
+            onPressed: _recenter,
+            icon: const Icon(Icons.center_focus_strong, color: _Sky.star),
+          ),
+        ),
+      ),
       if (widget.chapter != null)
         Positioned(
           left: 0,

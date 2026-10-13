@@ -5,6 +5,7 @@ import '../models/models.dart';
 import '../services/wikidata_service.dart';
 import '../state/library_store.dart';
 import '../theme/syl_theme.dart';
+import 'books_screen.dart' show BookPicker;
 import 'widgets/common.dart';
 
 Future<T?> _sheet<T>(BuildContext context, Widget child) => showModalBottomSheet<T>(
@@ -36,15 +37,23 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
   final _chapter = TextEditingController();
   final _name = TextEditingController();
   Entity? _target;
+  String? _book; // for a new entry; an existing one keeps its own book
   bool _saving = false;
 
   @override
   void initState() {
     super.initState();
     _target = widget.entity;
-    final cap = context.read<LibraryStore>().spoilerChapter;
-    _chapter.text = '${cap ?? 1}';
+    final store = context.read<LibraryStore>();
+    _book = widget.entity?.book ?? store.settings.currentBook;
+    _chapter.text = '${store.chapterFor(_book) ?? 1}';
   }
+
+  /// The fact's chapter starts at how far you've read its book.
+  void _setBook(String? book) => setState(() {
+        _book = book;
+        _chapter.text = '${context.read<LibraryStore>().chapterFor(book) ?? 1}';
+      });
 
   @override
   void dispose() {
@@ -71,7 +80,7 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
         showMessage(context, 'Pick who or what this fact is about.');
         return;
       }
-      target = store.byName(name) ?? await store.createEntity(name: name, type: 'Other', chapter: ch);
+      target = store.byName(name) ?? await store.createEntity(name: name, type: 'Other', book: _book, chapter: ch);
     }
     await store.addFact(target, text, ch);
     if (!mounted) return;
@@ -91,7 +100,10 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
         if (widget.entity == null) ...[
           if (_target != null)
             Row(children: [
-              SoftTag('About ${_target!.name}', dot: Syl.typeDot(_target!.type), background: Syl.white),
+              Flexible(
+                child: SoftTag('About ${_target!.name}${_target!.book != null ? ' · ${_target!.book}' : ''}',
+                    dot: Syl.typeDot(_target!.type), background: Syl.white),
+              ),
               const SizedBox(width: 8),
               TextButton(onPressed: () => setState(() => _target = null), child: const Text('Change')),
             ])
@@ -111,9 +123,14 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
                 for (final e in store.entities
                     .where((e) => e.name.toLowerCase().contains(_name.text.trim().toLowerCase()))
                     .take(5))
-                  FilterPill(label: e.name, dot: Syl.typeDot(e.type), selected: false, onTap: () => setState(() => _target = e)),
+                  FilterPill(label: e.name, dot: Syl.typeDot(e.type), selected: false, onTap: () {
+                    _setBook(e.book);
+                    setState(() => _target = e);
+                  }),
               ]),
             ],
+            const SizedBox(height: 12),
+            BookPicker(value: _book, onChanged: _setBook),
           ],
           const SizedBox(height: 12),
         ],
@@ -175,7 +192,7 @@ class _LinkSheetState extends State<_LinkSheet> {
   @override
   void initState() {
     super.initState();
-    final cap = context.read<LibraryStore>().spoilerChapter;
+    final cap = context.read<LibraryStore>().capFor(widget.source);
     if (cap != null) _chapter.text = '$cap';
   }
 

@@ -15,6 +15,8 @@ Merge rules (nothing the user wrote is lost unless they deleted it):
     link everywhere, unless the entity or link was edited or re-created after
     the deletion.
   - Links whose entities no longer exist are dropped.
+  - Books are matched by id; the copy changed most recently wins (so your
+    chapter in each book follows whichever device you last moved it on).
 
 Every sync request must carry the pairing code in the X-SYL-Code header.
 
@@ -128,10 +130,26 @@ def merge_libraries(local: dict, remote: dict) -> dict:
         kept_rels.append(r)
     kept_rels.sort(key=lambda r: (r["created_at"], core.relationship_key(r)))
 
+    books: dict[str, dict] = {}
+    for raw in list(local.get("books") or []) + list(remote.get("books") or []):
+        b = core.normalize_book(raw)
+        if not b:
+            continue
+        if b["id"] not in books or b["updated_at"] > books[b["id"]]["updated_at"]:
+            books[b["id"]] = b
+    kept_books = []
+    for b in books.values():
+        when = deleted["books"].get(b["id"])
+        if when is not None and when >= b["updated_at"]:
+            continue
+        kept_books.append(b)
+    kept_books.sort(key=lambda b: b["title"].lower())
+
     return {
         "entities": sorted(entities.values(), key=lambda e: e["name"].lower()),
         "relationships": kept_rels,
         "deleted": deleted,
+        "books": kept_books,
     }
 
 
@@ -144,6 +162,7 @@ def load_library() -> dict:
         "entities": core.load_all_entities(),
         "relationships": core.load_relationships(),
         "deleted": core.load_deleted(),
+        "books": core.load_books(),
     }
 
 
@@ -155,7 +174,7 @@ def backup_library() -> None:
     backup.mkdir(parents=True)
     if core.ENTITIES_DIR.exists():
         shutil.copytree(core.ENTITIES_DIR, backup / "entities")
-    for f in (core.RELATIONSHIPS_FILE, core.DELETED_FILE):
+    for f in (core.RELATIONSHIPS_FILE, core.DELETED_FILE, core.BOOKS_FILE):
         if f.exists():
             shutil.copy2(f, backup / f.name)
 
@@ -173,6 +192,7 @@ def write_library(lib: dict) -> dict[str, int]:
         removed += 1
     core.save_relationships(lib["relationships"])
     core.save_deleted(lib["deleted"])
+    core.save_books(lib["books"])
     return {"written": written, "removed": removed}
 
 

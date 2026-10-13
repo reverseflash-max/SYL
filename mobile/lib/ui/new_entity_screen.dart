@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../services/wikidata_service.dart';
 import '../state/library_store.dart';
 import '../theme/syl_theme.dart';
+import 'books_screen.dart' show BookPicker;
 import 'entity_screen.dart';
 import 'sheets.dart';
 import 'widgets/common.dart';
@@ -16,7 +17,7 @@ class NewEntityScreen extends StatefulWidget {
 
 class _NewEntityScreenState extends State<NewEntityScreen> {
   final _name = TextEditingController();
-  final _book = TextEditingController();
+  String? _book;
   final _chapter = TextEditingController();
   String _type = 'Character';
   WikidataInfo? _wd;
@@ -26,14 +27,13 @@ class _NewEntityScreenState extends State<NewEntityScreen> {
   void initState() {
     super.initState();
     final store = context.read<LibraryStore>();
-    _book.text = store.settings.currentBook ?? '';
-    _chapter.text = '${store.spoilerChapter ?? 1}';
+    _book = store.settings.currentBook;
+    _chapter.text = '${store.chapterFor(_book) ?? 1}';
   }
 
   @override
   void dispose() {
     _name.dispose();
-    _book.dispose();
     _chapter.dispose();
     super.dispose();
   }
@@ -44,7 +44,7 @@ class _NewEntityScreenState extends State<NewEntityScreen> {
       showMessage(context, 'Type a name first.');
       return;
     }
-    final info = await pickFromWikidata(context, q, hint: _book.text.trim().isEmpty ? null : _book.text.trim());
+    final info = await pickFromWikidata(context, q, hint: _book);
     if (info == null) return;
     setState(() {
       _wd = info;
@@ -67,7 +67,7 @@ class _NewEntityScreenState extends State<NewEntityScreen> {
     final e = await store.createEntity(
       name: name,
       type: _type,
-      book: _book.text.trim().isEmpty ? null : _book.text.trim(),
+      book: _book,
       chapter: int.tryParse(_chapter.text.trim()) ?? 1,
       wikidataInfo: _wd,
     );
@@ -124,7 +124,13 @@ class _NewEntityScreenState extends State<NewEntityScreen> {
             const SizedBox(height: 8),
             TypePicker(value: _type, onChanged: (t) => setState(() => _type = t)),
             const SizedBox(height: 20),
-            TextField(controller: _book, decoration: const InputDecoration(labelText: 'Book')),
+            BookPicker(
+              value: _book,
+              onChanged: (b) => setState(() {
+                _book = b;
+                _chapter.text = '${context.read<LibraryStore>().chapterFor(b) ?? 1}';
+              }),
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: _chapter,

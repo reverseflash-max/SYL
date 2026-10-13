@@ -373,17 +373,127 @@ class Relationship {
   String other(String id) => source == id ? target : source;
 }
 
+/// A book you're reading, have read or want to read (data/books.json).
+/// Entries point at a book by its title ([Entity.book]). Each book keeps its
+/// own chapter, and that is the spoiler shield for the entries in it.
+class Book {
+  final String id;
+  final String title;
+  final String author;
+
+  /// How many chapters the book has, if known (for progress).
+  final int? totalChapters;
+
+  /// Chapter titles from Open Library, if it had them: [chapterNames][0] is chapter 1.
+  final List<String> chapterNames;
+
+  /// Read up to this chapter. Nothing later is shown or sent to the AI.
+  /// Null means the shield is off for this book.
+  final int? chapter;
+
+  /// 'reading', 'finished' or 'want'.
+  final String status;
+
+  /// 1 to 5 stars, once you've rated it.
+  final int? rating;
+  final String? openLibraryKey;
+  final String updatedAt;
+
+  const Book({
+    required this.id,
+    required this.title,
+    this.author = '',
+    this.totalChapters,
+    this.chapterNames = const [],
+    this.chapter,
+    this.status = 'reading',
+    this.rating,
+    this.openLibraryKey,
+    this.updatedAt = '',
+  });
+
+  static const statuses = ['reading', 'want', 'finished'];
+
+  /// The name of chapter [c], if Open Library had it.
+  String? chapterName(int c) => c >= 1 && c <= chapterNames.length ? chapterNames[c - 1] : null;
+
+  factory Book.fromJson(Map<String, dynamic> j) {
+    final title = _str(j, ['title']).trim();
+    final status = _str(j, ['status'], 'reading');
+    final rating = j['rating'] is num ? (j['rating'] as num).toInt() : null;
+    final total = j['total_chapters'] is num ? (j['total_chapters'] as num).toInt() : null;
+    return Book(
+      id: _str(j, ['id'], slugify(title)),
+      title: title,
+      author: _str(j, ['author']),
+      totalChapters: total != null && total > 0 ? total : null,
+      chapterNames: (_pick<List>(j, ['chapter_names']) ?? const []).map((e) => e.toString()).toList(),
+      chapter: j['chapter'] == null ? null : parseChapter(j['chapter']),
+      status: statuses.contains(status) ? status : 'reading',
+      rating: rating != null && rating >= 1 && rating <= 5 ? rating : null,
+      openLibraryKey: _pick<String>(j, ['open_library_key']),
+      updatedAt: _str(j, ['updated_at']),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'author': author,
+        'total_chapters': totalChapters,
+        'chapter_names': chapterNames,
+        'chapter': chapter,
+        'status': status,
+        'rating': rating,
+        'open_library_key': openLibraryKey,
+        'updated_at': updatedAt,
+      };
+
+  Book copyWith({
+    String? title,
+    String? author,
+    int? totalChapters,
+    bool clearTotal = false,
+    List<String>? chapterNames,
+    int? chapter,
+    bool clearChapter = false,
+    String? status,
+    int? rating,
+    bool clearRating = false,
+    String? openLibraryKey,
+    String? updatedAt,
+  }) =>
+      Book(
+        id: id,
+        title: title ?? this.title,
+        author: author ?? this.author,
+        totalChapters: clearTotal ? null : (totalChapters ?? this.totalChapters),
+        chapterNames: chapterNames ?? this.chapterNames,
+        chapter: clearChapter ? null : (chapter ?? this.chapter),
+        status: status ?? this.status,
+        rating: clearRating ? null : (rating ?? this.rating),
+        openLibraryKey: openLibraryKey ?? this.openLibraryKey,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
+}
+
 /// data/deleted.json: what was deleted and when, so a sync with the PC
-/// doesn't bring it back. Keys: entity id, fact id, [Relationship.key].
+/// doesn't bring it back. Keys: entity id, fact id, [Relationship.key], book id.
 class DeletedLog {
   final Map<String, String> entities;
   final Map<String, String> facts;
   final Map<String, String> relationships;
+  final Map<String, String> books;
 
-  DeletedLog({Map<String, String>? entities, Map<String, String>? facts, Map<String, String>? relationships})
-      : entities = entities ?? {},
+  DeletedLog({
+    Map<String, String>? entities,
+    Map<String, String>? facts,
+    Map<String, String>? relationships,
+    Map<String, String>? books,
+  })  : entities = entities ?? {},
         facts = facts ?? {},
-        relationships = relationships ?? {};
+        relationships = relationships ?? {},
+        books = books ?? {};
 
   static Map<String, String> _map(Object? v) =>
       v is Map ? {for (final e in v.entries) e.key.toString(): e.value.toString()} : {};
@@ -392,12 +502,14 @@ class DeletedLog {
         entities: _map(j['entities']),
         facts: _map(j['facts']),
         relationships: _map(j['relationships']),
+        books: _map(j['books']),
       );
 
   Map<String, dynamic> toJson() => {
         'entities': entities,
         'facts': facts,
         'relationships': relationships,
+        'books': books,
       };
 }
 

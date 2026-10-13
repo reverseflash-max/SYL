@@ -70,26 +70,57 @@ class _LibraryScreenState extends State<LibraryScreen> {
     ('Other', 'Other'),
   ];
 
-  /// Moves your bookmark on a chapter, with a way back.
-  Future<void> _finishChapter(LibraryStore store, int cap) async {
-    final before = store.settings;
-    await store.updateSettings(before.copyWith(spoilerChapter: cap + 1));
+  /// Moves your place in [book] on a chapter, with a way back.
+  Future<void> _finishChapter(LibraryStore store, String book, int cap) async {
+    await store.setChapter(book, cap + 1);
     if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(
         content: Text('Bookmark moved to ch. ${cap + 1}'),
-        action: SnackBarAction(label: 'Undo', onPressed: () => store.updateSettings(before)),
+        action: SnackBarAction(label: 'Undo', onPressed: () => store.setChapter(book, cap)),
       ));
   }
+
+  /// Pick which of your books the Library shows.
+  Future<void> _pickBook(LibraryStore store) => showModalBottomSheet<void>(
+        context: context,
+        builder: (sheet) => SafeArea(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            for (final b in store.bookList.where((b) => b.status == 'reading'))
+              ListTile(
+                title: Text(b.title),
+                subtitle: b.chapter == null ? null : Text('Ch. ${b.chapter}'),
+                trailing: b.title == store.settings.currentBook ? const Icon(Icons.check) : null,
+                onTap: () {
+                  Navigator.pop(sheet);
+                  store.setCurrentBook(b.title);
+                },
+              ),
+            ListTile(
+              leading: const Icon(Icons.menu_book_outlined),
+              title: const Text('All your books'),
+              onTap: () {
+                Navigator.pop(sheet);
+                widget.onOpenReading();
+              },
+            ),
+          ]),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
     final store = context.watch<LibraryStore>();
     final book = store.settings.currentBook;
     final cap = store.spoilerChapter;
+    final chapterName = cap == null ? null : store.currentBook?.chapterName(cap);
     bool inBook(Entity e) => book == null || e.book == null || e.book == book;
-    bool pastBookmark(Entity e) => cap != null && e.discoveryChapter > cap;
+    // Each entry is shielded by its own book's chapter.
+    bool pastBookmark(Entity e) {
+      final c = store.capFor(e);
+      return c != null && e.discoveryChapter > c;
+    }
 
     // Search looks through every book; browsing shows the current one.
     final searching = _query.text.trim().isNotEmpty;
@@ -101,7 +132,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final bookEntities = store.entities.where(inBook).toList();
     final shown = bookEntities.where((e) => !pastBookmark(e)).toList();
     final hiddenEntries = bookEntities.length - shown.length;
-    final hiddenFacts = cap == null ? 0 : shown.fold(0, (n, e) => n + e.facts.length - e.visibleFacts(cap).length);
+    final hiddenFacts = shown.fold(0, (n, e) => n + e.facts.length - e.visibleFacts(store.capFor(e)).length);
     final newTonight = cap == null ? 0 : shown.where((e) => e.visibleFacts(cap).any((f) => f.chapter == cap)).length;
     final otherBooks = store.entities.length - bookEntities.length;
     final sealed = !searching && _type == null && (hiddenFacts > 0 || hiddenEntries > 0);
@@ -119,7 +150,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     }
 
     for (final e in items) {
-      place(_Bubble(e), _Bubble.estimateHeight(e, cap));
+      place(_Bubble(e), _Bubble.estimateHeight(e, store.capFor(e)));
     }
     if (sealed) place(_SealedBubble(facts: hiddenFacts, entries: hiddenEntries), 120);
     place(const _NewEntryTile(), 88);
@@ -144,12 +175,22 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       padding: const EdgeInsets.fromLTRB(22, 0, 12, 0),
                       child: Row(children: [
                         Expanded(
-                          child: GestureDetector(
-                            onTap: widget.onOpenReading,
-                            child: Text(book ?? 'No book set',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 14, color: _Night.muted)),
+                          // The book on show: tap to switch to another you're reading.
+                          child: InkWell(
+                            onTap: () => _pickBook(store),
+                            borderRadius: BorderRadius.circular(12),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(minHeight: 48),
+                              child: Row(children: [
+                                Flexible(
+                                  child: Text(book ?? 'No book set',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 14, color: _Night.muted)),
+                                ),
+                                const Icon(Icons.expand_more, size: 18, color: _Night.muted, semanticLabel: 'Choose a book'),
+                              ]),
+                            ),
                           ),
                         ),
                         RoundIconButton(
@@ -177,8 +218,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     else
                       _Sky(
                         chapter: cap,
+                        chapterName: chapterName,
                         newTonight: newTonight,
-                        onFinished: cap == null ? widget.onOpenReading : () => _finishChapter(store, cap),
+                        onFinished: cap == null || book == null ? widget.onOpenReading : () => _finishChapter(store, book, cap),
                       ),
                     SizedBox(
                       height: 48,
@@ -230,8 +272,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
 /// The hero: "ch. 12" big, the moons of the last few chapters, a hillside
 /// with a lit tower window, and the button that moves you on a chapter.
 class _Sky extends StatelessWidget {
-  const _Sky({required this.chapter, required this.newTonight, required this.onFinished});
+  const _Sky({required this.chapter, this.chapterName, required this.newTonight, required this.onFinished});
   final int? chapter;
+  final String? chapterName;
   final int newTonight;
   final VoidCallback onFinished;
 
@@ -240,7 +283,8 @@ class _Sky extends StatelessWidget {
     final cap = chapter;
     final line = cap == null
         ? 'Set the chapter you\'re on, and nothing past it will reach you.'
-        : '${newTonight == 0 ? 'Nothing new yet tonight' : newTonight == 1 ? 'One new face tonight' : '$newTonight new faces tonight'}. '
+        : '${chapterName != null ? '$chapterName. ' : ''}'
+            '${newTonight == 0 ? 'Nothing new yet tonight' : newTonight == 1 ? 'One new face tonight' : '$newTonight new faces tonight'}. '
             'Nothing past here can reach you.';
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
@@ -485,7 +529,7 @@ class _Bubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cap = context.watch<LibraryStore>().spoilerChapter;
+    final cap = context.watch<LibraryStore>().capFor(e);
     final facts = e.visibleFacts(cap).toList()..sort((a, b) => a.chapter.compareTo(b.chapter));
     final isNew = cap != null && facts.isNotEmpty && facts.last.chapter == cap;
     final preview = e.lore.description.isNotEmpty

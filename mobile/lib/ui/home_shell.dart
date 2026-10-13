@@ -5,13 +5,16 @@ import 'package:provider/provider.dart';
 
 import '../state/library_store.dart';
 import '../theme/syl_theme.dart';
+import 'books_screen.dart';
 import 'library_screen.dart';
 import 'map_screen.dart';
-import 'reading_screen.dart';
+import 'new_entity_screen.dart';
+import 'settings_screen.dart';
 import 'sheets.dart';
 
-/// Three tabs under a floating black pill: Library, Map, Reading. Swipe
-/// sideways to move between them. The yellow button adds a fact from anywhere.
+/// Four tabs under a floating pill: Library, Map, Books, Settings. Swipe
+/// sideways to move between them. The yellow + opens a small menu: a new
+/// book, a new character (or other entry) or a new fact, from anywhere.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
   @override
@@ -40,7 +43,8 @@ class _HomeShellState extends State<HomeShell> {
     final pages = [
       LibraryScreen(onOpenReading: () => _goTo(2)),
       const MapScreen(),
-      const ReadingScreen(),
+      const BooksScreen(),
+      const SettingsScreen(),
     ];
     return Scaffold(
       body: store.loading
@@ -124,7 +128,8 @@ class _PillNav extends StatelessWidget {
   static const _items = [
     (Icons.grid_view_rounded, 'Library'),
     (Icons.hub_outlined, 'Map'),
-    (Icons.menu_book_outlined, 'Reading'),
+    (Icons.menu_book_outlined, 'Books'),
+    (Icons.tune, 'Settings'),
   ];
 
   @override
@@ -139,24 +144,27 @@ class _PillNav extends StatelessWidget {
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.28), blurRadius: 40, offset: const Offset(0, 16))],
       ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
+      // On a very narrow screen the whole bar shrinks a little rather than overflow.
+      child: FittedBox(fit: BoxFit.scaleDown, child: Row(mainAxisSize: MainAxisSize.min, children: [
         for (var i = 0; i < _items.length; i++) ...[
           _NavItem(icon: _items[i].$1, label: _items[i].$2, selected: tab == i, onTap: () => onTab(i)),
           const SizedBox(width: 4),
         ],
         Tooltip(
-          message: 'Add a fact',
+          message: 'Add',
           child: Material(
             color: Syl.accent,
             shape: const CircleBorder(),
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: () => showQuickAdd(context),
-              child: SizedBox(width: 48, height: 48, child: Icon(Icons.add, color: Syl.onAccent, size: 26, semanticLabel: 'Add a fact')),
+            child: Builder(
+              builder: (button) => InkWell(
+                customBorder: const CircleBorder(),
+                onTap: () => showAddMenu(button),
+                child: const SizedBox(width: 48, height: 48, child: Icon(Icons.add, color: Syl.onAccent, size: 26, semanticLabel: 'Add')),
+              ),
             ),
           ),
         ),
-      ]),
+      ])),
     );
   }
 }
@@ -196,5 +204,37 @@ class _NavItem extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// The + menu, opening upwards from the button: a new book, a new
+/// character (or place, item...) or a new fact.
+Future<void> showAddMenu(BuildContext button) async {
+  final box = button.findRenderObject() as RenderBox;
+  final overlay = Overlay.of(button).context.findRenderObject() as RenderBox;
+  final at = box.localToGlobal(Offset.zero, ancestor: overlay);
+  PopupMenuItem<String> item(String value, IconData icon, String label) => PopupMenuItem(
+        value: value,
+        child: Row(children: [Icon(icon, size: 20), const SizedBox(width: 12), Text(label)]),
+      );
+  final choice = await showMenu<String>(
+    context: button,
+    color: Syl.white,
+    shape: const RoundedRectangleBorder(borderRadius: Syl.r20),
+    position: RelativeRect.fromLTRB(at.dx - 150, at.dy - 172, overlay.size.width - at.dx - box.size.width, overlay.size.height - at.dy),
+    items: [
+      item('book', Icons.menu_book_outlined, 'New book'),
+      item('entry', Icons.person_add_alt, 'New character'),
+      item('fact', Icons.edit_note, 'New fact'),
+    ],
+  );
+  if (!button.mounted) return;
+  switch (choice) {
+    case 'book':
+      await openNewBook(button);
+    case 'entry':
+      await Navigator.push(button, MaterialPageRoute(builder: (_) => const NewEntityScreen()));
+    case 'fact':
+      await showQuickAdd(button);
   }
 }

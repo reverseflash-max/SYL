@@ -18,7 +18,7 @@ void main() {
         const Entity(id: 'galadriel', name: 'Galadriel', type: 'Character', book: 'LOTR', meta: meta),
       ],
       relationships: const [Relationship(source: 'galadriel', target: 'aragorn', type: 'Mentor', createdAt: '')],
-      settings: const AppSettings(currentBook: 'LOTR'),
+      settings: const AppSettings(currentBook: 'LOTR', spoilerChapter: 3),
     );
     await tester.pumpWidget(ChangeNotifierProvider<LibraryStore>.value(
       value: store,
@@ -27,38 +27,35 @@ void main() {
     await tester.pumpAndSettle();
     final screen = tester.getSize(find.byType(HomeShell));
     bool showing(String title) => tester.getRect(find.text(title).first).overlaps(Offset.zero & screen);
+    Future<void> swipe(Finder from, double dx) async {
+      await tester.fling(from, Offset(dx, 0), 1500);
+      await tester.pumpAndSettle();
+    }
 
     // Library -> Map
-    expect(showing('Library'), isTrue);
-    await tester.fling(find.text('LOTR').first, const Offset(-300, 0), 1500); // the book name on the Library
-    await tester.pumpAndSettle();
+    expect(find.text('I finished ch. 3'), findsOneWidget);
+    await swipe(find.text('LOTR').first, -300); // the book name on the Library
     expect(showing('Map'), isTrue);
 
-    // A drag on the map canvas pans the map and stays on the Map tab.
-    final canvas = tester.getCenter(find.byType(InteractiveViewer));
-    await tester.flingFrom(canvas, const Offset(-300, 0), 1500);
+    // A drag on the sky pans the map and stays on the Map tab.
+    final sky = tester.getTopLeft(find.byType(InteractiveViewer)) + const Offset(200, 150);
+    await tester.flingFrom(sky, const Offset(-300, 0), 1500);
     await tester.pumpAndSettle();
     expect(showing('Map'), isTrue);
-    expect(find.text('Spoiler shield').hitTestable(), findsNothing);
+    expect(find.text('New book').hitTestable(), findsNothing);
 
-    // A swipe on the map's title moves on to Reading.
-    await tester.fling(find.text('Map').first, const Offset(-300, 0), 1500);
+    // Below the horizon a swipe moves on to Books.
+    // (beside the summary card, above the tab bar)
+    final belowHorizon = Offset(screen.width - 8, screen.height - 150);
+    await tester.flingFrom(belowHorizon, const Offset(-300, 0), 1500);
     await tester.pumpAndSettle();
-    expect(find.text('Spoiler shield').hitTestable(), findsOneWidget);
+    expect(find.text('New book').hitTestable(), findsOneWidget);
 
-    // Unsaved text survives swiping away and back.
+    // Books -> Settings; unsaved text survives swiping away and back.
+    await swipe(find.text('Books').first, -300);
     await tester.enterText(find.widgetWithText(TextField, 'Model (optional)'), 'qwen');
-    await tester.fling(find.text('Spoiler shield'), const Offset(300, 0), 1500);
-    await tester.pumpAndSettle();
-    await tester.fling(find.text('Map').first, const Offset(-300, 0), 1500);
-    await tester.pumpAndSettle();
+    await swipe(find.text('AI on your PC'), 300);
+    await swipe(find.text('Books').first, -300);
     expect(find.text('qwen'), findsOneWidget);
-
-    // Swipe back to the Library.
-    await tester.fling(find.text('Spoiler shield'), const Offset(300, 0), 1500);
-    await tester.pumpAndSettle();
-    await tester.fling(find.text('Map').first, const Offset(300, 0), 1500);
-    await tester.pumpAndSettle();
-    expect(showing('Library'), isTrue);
   });
 }
