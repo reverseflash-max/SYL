@@ -11,6 +11,7 @@ import 'map_screen.dart';
 import 'new_entity_screen.dart';
 import 'settings_screen.dart';
 import 'sheets.dart';
+import 'widgets/keyboard.dart';
 
 /// Four tabs under a floating pill: Library, Map, Books, Settings. Swipe
 /// sideways to move between them. The yellow + opens a small menu: a new
@@ -33,6 +34,7 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   void _goTo(int tab) {
+    dropFocus(); // a text box on the tab you leave keeps no hold on the keyboard
     setState(() => _tab = tab);
     _pages.animateToPage(tab, duration: const Duration(milliseconds: 320), curve: Curves.easeOutCubic);
   }
@@ -66,7 +68,10 @@ class _HomeShellState extends State<HomeShell> {
                 child: PageView(
                   controller: _pages,
                   physics: const NeverScrollableScrollPhysics(),
-                  onPageChanged: (i) => setState(() => _tab = i),
+                  onPageChanged: (i) {
+                    dropFocus();
+                    setState(() => _tab = i);
+                  },
                   children: [for (final page in pages) _KeepAlive(child: page)],
                 ),
               ),

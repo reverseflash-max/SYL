@@ -6,6 +6,7 @@ import '../services/open_library_service.dart';
 import '../state/library_store.dart';
 import '../theme/syl_theme.dart';
 import 'widgets/common.dart';
+import 'widgets/keyboard.dart';
 
 /// Your books: what you're reading (each with its own chapter, which is that
 /// book's spoiler shield), what you want to read, and what you've finished.
@@ -699,7 +700,12 @@ class BookPicker extends StatelessWidget {
         for (final t in titles) DropdownMenuItem(value: t, child: Text(t, overflow: TextOverflow.ellipsis)),
         const DropdownMenuItem(value: null, child: Text('No book')),
       ],
-      onChanged: onChanged,
+      // A dropdown, not a text box: never leave the keyboard open around it.
+      onTap: dropFocus,
+      onChanged: (v) {
+        dropFocus();
+        onChanged(v);
+      },
     );
   }
 }

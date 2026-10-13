@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'state/library_store.dart';
 import 'theme/syl_theme.dart';
 import 'ui/home_shell.dart';
+import 'ui/widgets/keyboard.dart';
 
 void main() {
   // The font ships in assets/fonts; never fetch it from the internet.
@@ -26,6 +27,9 @@ class SylApp extends StatelessWidget {
         title: 'SYL',
         debugShowCheckedModeBanner: false,
         theme: Syl.theme(),
+        // The keyboard only opens for a tapped text box (see keyboard.dart).
+        navigatorObservers: [DropFocusOnPush()],
+        builder: (context, child) => TapAwayToCloseKeyboard(child: child!),
         home: const HomeShell(),
       ),
     );
