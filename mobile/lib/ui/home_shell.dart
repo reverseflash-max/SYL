@@ -135,6 +135,8 @@ class _PillNav extends StatelessWidget {
       decoration: BoxDecoration(
         color: Syl.inverse,
         borderRadius: BorderRadius.circular(32),
+        // a faint edge, so the bar still shows against the Map's night sky
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.28), blurRadius: 40, offset: const Offset(0, 16))],
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [

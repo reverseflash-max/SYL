@@ -28,7 +28,9 @@ void main() {
     expect(find.text('Aragorn'), findsNothing);
     expect(find.text('Stray'), findsNothing);
 
-    await tester.scrollUntilVisible(find.text('No book'), 120, scrollable: find.byType(Scrollable).first);
+    // The book chip opens a list of books.
+    await tester.tap(find.text('Mistborn'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('No book'));
     await tester.pumpAndSettle();
     expect(find.text('Stray'), findsWidgets);
@@ -45,7 +47,8 @@ void main() {
       child: MaterialApp(theme: Syl.theme(googleFonts: false), home: const Scaffold(body: MapScreen())),
     ));
     await tester.pumpAndSettle();
-    expect(find.text('Mistborn'), findsOneWidget); // the subtitle, no pill
+    expect(find.text('Mistborn'), findsOneWidget); // the book chip
+    expect(find.byIcon(Icons.expand_more), findsNothing); // nothing to choose
     expect(find.text('Vin'), findsWidgets);
   });
 }
