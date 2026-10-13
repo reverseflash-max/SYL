@@ -21,7 +21,6 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:mobile/main.dart';
 import 'package:mobile/state/library_store.dart';
 import 'package:mobile/theme/syl_theme.dart';
 import 'package:mobile/ui/home_shell.dart';
@@ -43,11 +42,10 @@ const devices = [
 ];
 
 class Scenario {
-  const Scenario(this.name, this.open, {this.store = sampleLibrary, this.dark = false});
+  const Scenario(this.name, this.open, {this.store = sampleLibrary});
   final String name;
   final Future<void> Function(WidgetTester tester) open;
   final LibraryStore Function() store;
-  final bool dark;
 }
 
 Future<void> _tapNav(WidgetTester t, IconData icon) async {
@@ -76,18 +74,6 @@ final scenarios = <Scenario>[
     expect(find.byType(NewEntityScreen), findsOneWidget);
   }),
   Scenario('7-empty-library', (t) async {}, store: LibraryStore.memory),
-  // Dark mode: the same screens again.
-  Scenario('8-library-dark', (t) async {}, dark: true),
-  Scenario('9-entry-dark', (t) async {
-    await t.tap(find.text('Aragorn').first);
-    await t.pumpAndSettle();
-  }, dark: true),
-  Scenario('10-map-dark', (t) => _tapNav(t, Icons.hub_outlined), dark: true),
-  Scenario('11-reading-dark', (t) => _tapNav(t, Icons.menu_book_outlined), dark: true),
-  Scenario('12-quick-add-dark', (t) async {
-    await t.tap(find.byTooltip('Add a fact'));
-    await t.pumpAndSettle();
-  }, dark: true),
 ];
 
 /// Text below this size (in logical pixels, before the user's text scaling) fails.
@@ -269,13 +255,11 @@ void main() {
         tester.view.physicalSize = device.size * device.pixelRatio;
         tester.view.devicePixelRatio = device.pixelRatio;
         addTearDown(tester.view.reset);
-        addTearDown(() => Syl.dark = false);
         await tester.pumpWidget(ChangeNotifierProvider<LibraryStore>.value(
           value: s.store(),
           child: MaterialApp(
             debugShowCheckedModeBanner: false,
-            theme: Syl.theme(dark: s.dark),
-            builder: (context, child) => SylMode(dark: s.dark, child: child!),
+            theme: Syl.theme(),
             home: const HomeShell(),
           ),
         ));

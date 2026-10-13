@@ -220,23 +220,6 @@ class _ReadingScreenState extends State<ReadingScreen> {
               ],
             ]),
           ),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: Syl.white, borderRadius: Syl.r24),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              const Text('Appearance', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 12),
-              Wrap(spacing: 8, runSpacing: 8, children: [
-                for (final (value, label) in const [('system', 'Follow phone'), ('light', 'Light'), ('dark', 'Dark')])
-                  FilterPill(
-                    label: label,
-                    selected: store.settings.appearance == value,
-                    onTap: () => store.updateSettings(store.settings.copyWith(appearance: value)),
-                  ),
-              ]),
-            ]),
-          ),
           const SizedBox(height: 18),
           FilledButton(onPressed: _save, child: const Text('Save')),
           const SizedBox(height: 18),

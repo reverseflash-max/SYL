@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Bubbles coloured by type. Light mode is "Bento": warm paper, ink-black
-/// accents and pastel bubbles. Dark mode is "Jewel box": night ground and
-/// the same bubbles in deep jewel tones. Names stay the same in both modes
-/// (butter is sapphire in the dark), so screens never check the mode.
+/// "Night watch": the whole app is a night drawing in, indigo ground and
+/// bubbles in jewel tones coloured by type. The older light "Bento" palette is
+/// kept for reference, but the app always shows the night. Colour names are
+/// shared by both (butter is sapphire at night), so screens never check.
 class Syl {
   /// Set by the app from the reader's choice; every colour below follows it.
-  static bool dark = false;
+  static bool dark = true;
   static _Palette get _p => dark ? _Palette.night : _Palette.day;
 
   static Color get paper => _p.paper;
@@ -83,7 +83,7 @@ class Syl {
 
   /// The app theme for one mode. Builds from that mode's palette whatever
   /// mode is showing, so the light and dark themes can be made side by side.
-  static ThemeData theme({bool googleFonts = true, bool dark = false}) {
+  static ThemeData theme({bool googleFonts = true, bool dark = true}) {
     final was = Syl.dark;
     Syl.dark = dark;
     try {
@@ -189,10 +189,10 @@ class _Palette {
 
   // Jewel tones: sapphire, emerald, garnet, amethyst, slate.
   static const night = _Palette(
-    paper: Color(0xFF111218), ink: Color(0xFFF2EEE6), muted: Color(0xFFB4AFC0), line: Color(0xFF34364A),
-    surface: Color(0xFF1F2130), inkSoft: Color(0xFFC9C3D6), onInkMuted: Color(0xFFB4AFC0),
-    inverse: Color(0xFF262839), onInverse: Color(0xFFF2EEE6),
-    butter: Color(0xFF2C4580), mint: Color(0xFF235A43), peach: Color(0xFF74293A), lilac: Color(0xFF55387E), sky: Color(0xFF34405A),
+    paper: Color(0xFF1B2240), ink: Color(0xFFF2EEE6), muted: Color(0xFFA9B0CC), line: Color(0xFF3A4270),
+    surface: Color(0xFF262E52), inkSoft: Color(0xFFC9CEE2), onInkMuted: Color(0xFFA9B0CC),
+    inverse: Color(0xFF121830), onInverse: Color(0xFFF2EEE6),
+    butter: Color(0xFF34509A), mint: Color(0xFF235A43), peach: Color(0xFF74293A), lilac: Color(0xFF55387E), sky: Color(0xFF34405A),
   );
 }
 

@@ -17,15 +17,15 @@ import 'home_shell.dart' show NoTabSwipe;
 /// around it. Whatever is past your chapter is still below the horizon.
 /// Tap a star to focus it, tap again to open it.
 ///
-/// The sky is dark in light mode too: it is the Map's own world.
+/// The sky is the same night indigo as the rest of the app.
 class _Sky {
-  static const ground = Color(0xFF0C0F12);
+  static const ground = Color(0xFF1B2240);
   static const star = Color(0xFFE9EEEC);
   static const dim = Color(0xFFB8C3C1);
-  static const muted = Color(0xFF93A09E);
-  static const faint = Color(0xFF5E6A69);
+  static const muted = Color(0xFFA9B0CC);
+  static const faint = Color(0xFF5A6289);
   static const teal = Color(0xFF86D6C6);
-  static const card = Color(0xFF161B1F);
+  static const card = Color(0xFF121830);
 }
 
 class MapScreen extends StatefulWidget {
@@ -169,7 +169,7 @@ class _BookChip extends StatelessWidget {
     final many = choices.length > 1;
     return Material(
       color: Colors.transparent,
-      shape: const StadiumBorder(side: BorderSide(color: Color(0xFF2E3639))),
+      shape: const StadiumBorder(side: BorderSide(color: Color(0xFF3A4270))),
       child: InkWell(
         customBorder: const StadiumBorder(),
         onTap: !many
@@ -505,7 +505,7 @@ class _FocusCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: _Sky.card,
         borderRadius: Syl.r20,
-        border: Border.all(color: const Color(0xFF232A2D)),
+        border: Border.all(color: const Color(0xFF2E3765)),
       ),
       child: Row(children: [
         Expanded(

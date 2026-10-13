@@ -12,8 +12,7 @@ import 'widgets/common.dart';
 /// "Night watch": the Library as a night drawing in over the book. Your
 /// chapter is the moon, the last few chapters are the moons before it, and
 /// the entries are bubbles in jewel tones. Anything past your chapter is
-/// counted, never named. The night is the Library's own world, so it stays
-/// dark in light mode too.
+/// counted, never named.
 class _Night {
   static const ground = Color(0xFF1B2240);
   static const deep = Color(0xFF121830);
@@ -313,7 +312,7 @@ class _Moons extends StatelessWidget {
   }
 }
 
-/// Stars, two hills and a tower with one lit window.
+/// Stars, two hills and a tower with one lit window, where someone is reading.
 class _HillsPainter extends CustomPainter {
   const _HillsPainter();
 
@@ -353,20 +352,45 @@ class _HillsPainter extends CustomPainter {
     final deep = Paint()..color = _Night.deep;
     // tower: body, roof, battlements
     final tx = w * 0.2;
-    canvas.drawRect(Rect.fromLTWH(tx, h * 0.48, 22, h * 0.36), deep);
+    const tw = 38.0;
+    canvas.drawRect(Rect.fromLTWH(tx, h * 0.44, tw, h * 0.42), deep);
     canvas.drawPath(
         Path()
-          ..moveTo(tx - 4, h * 0.48)
-          ..lineTo(tx + 26, h * 0.48)
-          ..lineTo(tx + 22, h * 0.43)
-          ..lineTo(tx, h * 0.43)
+          ..moveTo(tx - 4, h * 0.44)
+          ..lineTo(tx + tw + 4, h * 0.44)
+          ..lineTo(tx + tw, h * 0.39)
+          ..lineTo(tx, h * 0.39)
           ..close(),
         deep);
-    for (var i = 0; i < 4; i++) {
-      canvas.drawRect(Rect.fromLTWH(tx - 4 + i * 8.5, h * 0.37, 5, h * 0.06), deep);
+    for (var i = 0; i < 5; i++) {
+      canvas.drawRect(Rect.fromLTWH(tx - 4 + i * 9.6, h * 0.33, 5, h * 0.06), deep);
     }
+    // the lit window, with someone inside reading a book
+    final win = Rect.fromLTWH(tx + 8, h * 0.5, 22, 24);
     canvas.drawRRect(
-        RRect.fromRectAndRadius(Rect.fromLTWH(tx + 7, h * 0.57, 8, 11), const Radius.circular(4)), Paint()..color = Syl.accent);
+        RRect.fromRectAndCorners(win, topLeft: const Radius.circular(9), topRight: const Radius.circular(9)),
+        Paint()..color = Syl.accent);
+    final reader = Paint()..color = _Night.deep;
+    final cx = win.left + 7, top = win.top + 6;
+    canvas.drawCircle(Offset(cx, top + 2.6), 2.6, reader); // head, bent over the page
+    canvas.drawPath(
+        Path() // shoulders and back
+          ..moveTo(cx - 5.5, win.bottom)
+          ..quadraticBezierTo(cx - 5.5, top + 6.5, cx - 1, top + 6)
+          ..lineTo(cx + 2, top + 6)
+          ..quadraticBezierTo(cx + 4.5, top + 7, cx + 4.5, win.bottom)
+          ..close(),
+        reader);
+    canvas.drawPath(
+        Path() // the open book, held up in front
+          ..moveTo(cx + 2.5, top + 9.5)
+          ..lineTo(cx + 6, top + 7.2)
+          ..lineTo(cx + 9.5, top + 9.5)
+          ..lineTo(cx + 9.5, top + 12.5)
+          ..lineTo(cx + 6, top + 10.5)
+          ..lineTo(cx + 2.5, top + 12.5)
+          ..close(),
+        reader);
     // trees
     for (final (x, size) in [(0.5, 20.0), (0.55, 16.0), (0.84, 16.0)]) {
       canvas.drawPath(

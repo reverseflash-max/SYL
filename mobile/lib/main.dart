@@ -22,37 +22,12 @@ class SylApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider<LibraryStore>(
       create: (_) => (store ?? LibraryStore())..load(),
-      child: Selector<LibraryStore, String>(
-        selector: (_, s) => s.settings.appearance,
-        builder: (_, appearance, __) => MaterialApp(
-          title: 'SYL',
-          debugShowCheckedModeBanner: false,
-          theme: Syl.theme(),
-          darkTheme: Syl.theme(dark: true),
-          themeAnimationDuration: Duration.zero, // the tree rebuilds per mode; no cross-fade
-          themeMode: switch (appearance) {
-            'light' => ThemeMode.light,
-            'dark' => ThemeMode.dark,
-            _ => ThemeMode.system,
-          },
-          builder: (context, child) => SylMode(dark: Theme.of(context).brightness == Brightness.dark, child: child!),
-          home: const HomeShell(),
-        ),
+      child: MaterialApp(
+        title: 'SYL',
+        debugShowCheckedModeBanner: false,
+        theme: Syl.theme(),
+        home: const HomeShell(),
       ),
     );
-  }
-}
-
-/// Points Syl's colours at the mode on show. Screens read those colours
-/// directly, so the whole tree is rebuilt (keyed by mode) when it changes.
-class SylMode extends StatelessWidget {
-  const SylMode({super.key, required this.dark, required this.child});
-  final bool dark;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    Syl.dark = dark;
-    return KeyedSubtree(key: ValueKey(dark), child: child);
   }
 }
