@@ -82,6 +82,17 @@ flutter test
 
 The Python sync tests run from the project root with `python -m unittest discover tests`.
 
+### Design checks and screenshots
+
+`mobile/test/design/design_check_test.dart` opens every screen on a normal and a small Android phone and fails on tap targets under 48dp, unlabelled buttons, text contrast under 4.5:1 (3:1 for large text), text under 11sp, or text that isn't in the app's font. It runs with the other tests. To also save every screen as a PNG plus a contact sheet:
+
+```
+cd mobile
+SYL_SHOTS=/tmp/syl-shots flutter test test/design/design_check_test.dart
+```
+
+The sample library it uses is `mobile/test/design/sample_library.dart`.
+
 ## Android APK
 
 GitHub Actions builds the app on every push that changes `mobile/` and publishes it as the `apk-latest` release: open https://github.com/reverseflash-max/SYL/releases/tag/apk-latest on the phone and install `syl.apk`.

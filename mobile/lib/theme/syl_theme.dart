@@ -22,11 +22,12 @@ class Syl {
   static const danger = Color(0xFFB3261E);
 
   /// Dot colour for each type (filter chips, labels).
+  /// Category dots carry meaning, so each is dark enough to read on white and on the pastels.
   static Color typeDot(String type) => switch (type) {
-        'Character' => const Color(0xFFE8B93A),
-        'Location' => const Color(0xFF57A86F),
-        'Item' => const Color(0xFF8C74D6),
-        'Lore' => const Color(0xFFE38A55),
+        'Character' => const Color(0xFF8C6400),
+        'Location' => const Color(0xFF2F7A47),
+        'Item' => const Color(0xFF6650C2),
+        'Lore' => const Color(0xFFB4541F),
         _ => muted,
       };
 
@@ -88,7 +89,8 @@ class Syl {
           foregroundColor: paper,
           minimumSize: const Size(44, 48),
           shape: const StadiumBorder(),
-          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+          // From the text theme, so button labels use the app's font, not the phone's.
+          textStyle: text.labelLarge?.copyWith(fontWeight: FontWeight.w700, fontSize: 15),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -100,9 +102,9 @@ class Syl {
         ),
       ),
       textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(foregroundColor: ink)),
-      snackBarTheme: const SnackBarThemeData(
+      snackBarTheme: SnackBarThemeData(
         backgroundColor: ink,
-        contentTextStyle: TextStyle(color: paper),
+        contentTextStyle: text.bodyMedium?.copyWith(color: paper),
         behavior: SnackBarBehavior.floating,
         shape: StadiumBorder(),
         // float above the pill navigation bar

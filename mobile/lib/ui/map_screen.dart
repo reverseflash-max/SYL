@@ -90,7 +90,7 @@ class _MapScreenState extends State<MapScreen> {
             if (choices.length > 1) ...[
               const SizedBox(height: 12),
               SizedBox(
-                height: 40,
+                height: 48,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: choices.length,

@@ -35,6 +35,8 @@ A spoiler-aware fantasy reading companion. The user records facts per chapter. S
 - Everything that shows facts or sends them to the AI must go through the spoiler filter (`visible_facts` / `visibleFacts`).
 - No Telegram or other notification code belongs in this project.
 - After `flutter analyze` passes, run the app and open every screen. Analyze does not catch runtime state bugs.
+- Design checks (`mobile/test/design/design_check_test.dart`) must pass: 48dp tap targets, labels, contrast, 11sp minimum, the app font everywhere. Run them with `SYL_SHOTS=<dir>` and look at the contact sheet after any UI change.
+- The app font (Bricolage Grotesque) is bundled in `mobile/assets/fonts/` and never downloaded.
 
 ## Known gaps / next ideas
 

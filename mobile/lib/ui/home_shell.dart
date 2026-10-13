@@ -181,6 +181,7 @@ class _NavItem extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
             height: 48,
+            constraints: const BoxConstraints(minWidth: 48),
             padding: EdgeInsets.symmetric(horizontal: selected ? 16 : 13),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Icon(icon, size: 21, color: selected ? Syl.ink : Syl.paper),

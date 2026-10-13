@@ -156,9 +156,9 @@ class _ReadingScreenState extends State<ReadingScreen> {
               const Text('AI on your PC', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
               const SizedBox(height: 4),
               const Text(
-                'SYL uses the model loaded in LM Studio. On the PC use http://127.0.0.1:1234. '
-                'On your phone use your PC\'s Wi-Fi address (e.g. http://<your PC IP>:1234) and turn on '
-                '"Serve on Local Network" in LM Studio.',
+                'SYL uses the model loaded in LM Studio. On the PC, use http://127.0.0.1 and LM Studio\'s port '
+                '(usually 1234). On your phone, use the same address as Sync with your PC below, while '
+                'python syl.py serve is running: the PC passes AI requests on to LM Studio.',
                 style: TextStyle(fontSize: 13, color: Syl.muted),
               ),
               const SizedBox(height: 14),

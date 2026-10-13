@@ -21,3 +21,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # Bricolage Grotesque, bundled so the app never downloads fonts (OFL, see assets/fonts/OFL.txt).
+  assets:
+    - assets/fonts/
