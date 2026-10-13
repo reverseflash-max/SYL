@@ -1,0 +1,197 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Instrument+Sans:wdth,wght@75..100,400..700&display=block" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #DADADA; display: flex; gap: 40px; padding: 40px; align-items: flex-start; }
+  .col { display:flex; flex-direction: column; }
+  .cap { font: 600 15px "Instrument Sans"; color: #222; margin-bottom: 10px; }
+  .screen { width: 412px; height: 915px; position: relative; overflow: hidden; flex: none; font-family: "Instrument Sans", sans-serif; }
+  .status { height: 36px; display: flex; align-items: center; justify-content: space-between; padding: 0 22px; font: 500 14px/1 "Instrument Sans"; }
+  .gesture { position: absolute; bottom: 8px; left: 50%; width: 108px; height: 4px; margin-left: -54px; border-radius: 2px; }
+  .tnum { font-variant-numeric: tabular-nums; }
+  svg { display: block; }
+  .iconbtn { width:48px; height:48px; display:grid; place-items:center; flex: none; }
+  .fab { position:absolute; right:16px; bottom: 96px; height: 56px; padding: 0 22px 0 18px; border-radius: 16px; display:flex; align-items:center; gap:10px; font: 600 16px "Instrument Sans"; z-index: 4; }
+  .nav { position:absolute; left:0; right:0; bottom:0; height: 80px; padding-bottom: 16px; display:grid; grid-template-columns: repeat(3,1fr); align-items:center; text-align:center; font: 500 12px "Instrument Sans"; z-index: 4; }
+  .nav .on { font-weight: 700; }
+  .nav .pill { width: 56px; height: 30px; margin: 0 auto 4px; border-radius: 15px; display:grid; place-items:center; }
+
+  /* Cover placeholder (real cover art comes later) */
+  .cover { flex: none; border-radius: 3px 6px 6px 3px; position: relative; overflow: hidden; background: linear-gradient(160deg, #2C3B2F, #18211A); color: #E9E2CC; box-shadow: 0 6px 14px rgba(0,0,0,.25), inset 3px 0 0 rgba(255,255,255,.08); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; font: 400 11px/1.15 "Libre Caslon Text"; padding: 6px; }
+  .cover svg { margin-bottom: 6px; }
+
+  /* index rows shared */
+  .letter { font: 700 12px "Instrument Sans"; letter-spacing: 1.5px; padding: 16px 0 4px; }
+  .ix { padding: 10px 0 11px; }
+  .ix .nm { font: 700 18px/1.2 "Libre Caslon Text"; }
+  .ix .refs { font: 400 15px "Libre Caslon Text"; }
+  .ix p { font: 400 14px/1.35 "Instrument Sans"; margin-top: 3px; }
+
+  /* ---------- J. Paper index ---------- */
+  .j { --ground:#F6F5F1; --ink:#1E2129; --ink2:#666A73; --rule:#E2E0DA; --acc:#1F5E7A; background: var(--ground); color: var(--ink); }
+  .j .gesture { background: var(--ink); }
+  .j .head { display:flex; gap: 16px; padding: 10px 20px 0; align-items: flex-end; }
+  .j .head h1 { font: 400 26px/1.1 "Libre Caslon Text"; letter-spacing: -0.3px; }
+  .j .head .by { font-size: 14px; color: var(--ink2); margin-top: 4px; }
+  .j .head .at { margin-top: 12px; font-size: 14px; color: var(--ink2); }
+  .j .head .at b { color: var(--acc); }
+  .j .searchbox { margin: 20px 20px 0; height: 48px; border-radius: 24px; background: #ECEAE4; display:flex; align-items:center; gap: 10px; padding: 0 16px; color: var(--ink2); font-size: 15px; }
+  .j .list { padding: 0 20px; }
+  .j .letter { color: var(--acc); border-bottom: 1px solid var(--rule); }
+  .j .ix { border-bottom: 1px solid var(--rule); }
+  .j .ix .refs { color: var(--ink2); }
+  .j .ix p { color: var(--ink2); }
+  .j .new { color: var(--acc); font-weight: 600; }
+  .j .blur { filter: blur(4.5px); opacity: .55; }
+  .j .hidden { display:flex; align-items:center; gap: 8px; font-size: 13px; color: var(--ink2); padding: 6px 0 0; }
+  .j .fab { background: var(--ink); color: var(--ground); box-shadow: 0 6px 16px rgba(0,0,0,.18); }
+  .j .nav { background: #ECEAE4; color: var(--ink2); }
+  .j .nav .on { color: var(--ink); }
+  .j .nav .on .pill { background: #DDDAD2; }
+
+  /* ---------- K. Cloth band + page ---------- */
+  .k { --cloth:#22314D; --page:#F4F2EC; --ink:#1E2230; --ink2:#5F6372; --rule:#E0DCD2; --acc:#5B3F8C; background: var(--page); color: var(--ink); }
+  .k .gesture { background: var(--ink); }
+  .k .band { background: var(--cloth) repeating-linear-gradient(90deg, rgba(255,255,255,.025) 0 1px, transparent 1px 3px); color: #E6E9F0; padding-bottom: 22px; }
+  .k .band .row { display:flex; gap: 16px; padding: 8px 16px 0 20px; align-items: flex-start; }
+  .k .band h1 { font: 400 27px/1.08 "Libre Caslon Text"; margin-top: 6px; }
+  .k .band .by { font-size: 14px; color: #A3AECA; margin-top: 6px; }
+  .k .band .prog { margin: 18px 20px 0; }
+  .k .band .bar { height: 4px; background: #34456A; border-radius: 2px; position: relative; }
+  .k .band .bar i { position:absolute; left:0; top:0; bottom:0; width: 55%; background: #E6E9F0; border-radius: 2px; }
+  .k .band .lbls { display:flex; justify-content: space-between; font-size: 13px; color: #A3AECA; margin-top: 8px; }
+  .k .band .lbls b { color: #E6E9F0; }
+  .k .list { padding: 0 20px; }
+  .k .h2 { display:flex; justify-content: space-between; padding: 18px 0 2px; font: 700 12px "Instrument Sans"; letter-spacing: 1.5px; color: var(--ink2); }
+  .k .ix { border-bottom: 1px solid var(--rule); }
+  .k .ix .refs { color: var(--ink2); }
+  .k .ix p { color: var(--ink2); }
+  .k .new { color: var(--acc); font-weight: 600; }
+  .k .mark { display:flex; align-items:center; gap: 10px; margin: 14px 0 4px; font: 600 13px "Instrument Sans"; color: var(--acc); }
+  .k .mark::before, .k .mark::after { content:""; height: 2px; background: var(--acc); flex: 1; opacity: .5; }
+  .k .later .nm { color: #9B9EA8; }
+  .k .later p { color: #A5A8B1; font-style: italic; }
+  .k .fab { background: var(--acc); color: #fff; box-shadow: 0 6px 16px rgba(0,0,0,.2); }
+  .k .nav { background: #EAE7DF; color: var(--ink2); }
+  .k .nav .on { color: var(--ink); }
+  .k .nav .on .pill { background: #DCD8CE; }
+
+  /* ---------- L. Dark index with thumb tabs ---------- */
+  .l { --ground:#141925; --ink:#E8EAF0; --ink2:#9298A8; --rule:#262D3C; --acc:#E58A6B; background: var(--ground); color: var(--ink); }
+  .l .gesture { background: var(--ink); }
+  .l .head { text-align:center; padding: 6px 20px 0; position: relative; }
+  .l .head .cover { margin: 6px auto 0; }
+  .l .head h1 { font: 400 24px "Libre Caslon Text"; margin-top: 14px; }
+  .l .head .at { font-size: 14px; color: var(--ink2); margin-top: 4px; }
+  .l .head .at b { color: var(--acc); }
+  .l .search { position:absolute; right: 12px; top: 0; }
+  .l .list { padding: 6px 56px 0 20px; }
+  .l .letter { color: var(--ink2); }
+  .l .ix { border-bottom: 1px solid var(--rule); }
+  .l .ix .refs { color: var(--ink2); }
+  .l .ix p { color: var(--ink2); }
+  .l .new { color: var(--acc); font-weight: 600; }
+  .l .ph { height: 9px; border-radius: 5px; background: #222A3A; margin-top: 7px; }
+  .l .lock { font-size: 13px; color: var(--ink2); margin-top: 8px; }
+  .l .thumbs { position:absolute; right: 0; top: 330px; display:flex; flex-direction: column; gap: 4px; }
+  .l .thumbs span { width: 34px; height: 30px; border-radius: 8px 0 0 8px; background: #1E2534; color: #5C6478; display:grid; place-items:center; font: 700 13px "Instrument Sans"; }
+  .l .thumbs span.has { color: var(--ink); background: #283149; }
+  .l .thumbs span.on { background: var(--acc); color: #2A120A; }
+  .l .fab { background: var(--acc); color: #2A120A; }
+  .l .nav { background: #10141E; color: var(--ink2); }
+  .l .nav .on { color: var(--ink); }
+  .l .nav .on .pill { background: #283149; }
+</style></head>
+<body>
+
+<!-- ======================= J. PAPER INDEX ======================= -->
+<div class="col"><div class="cap">J. Paper index</div>
+<section class="screen j">
+  <div class="status"><span class="tnum">21:47</span><span>●●● ▮</span></div>
+  <div class="head">
+    <div class="cover" style="width:76px;height:112px"><svg width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="10" fill="none" stroke="#C9B77A" stroke-width="1.5"/></svg>The Lord<br>of the Rings</div>
+    <div><h1>The Lord<br>of the Rings</h1><div class="by">J. R. R. Tolkien</div><div class="at">Read to <b class="tnum">ch. 12</b>, Flight to the Ford</div></div>
+  </div>
+  <div class="searchbox"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666A73" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 20 20"/></svg>Who is this again?</div>
+  <div class="list">
+    <div class="letter">A</div>
+    <div class="ix"><span class="nm">Aragorn</span><span class="refs tnum">, 10–12</span><p><span class="new">New in 12</span> · Heir of Isildur, though he keeps it quiet</p></div>
+    <div class="letter">B</div>
+    <div class="ix"><span class="nm">Bree</span><span class="refs tnum">, 9–11</span><p>Place · the Prancing Pony</p></div>
+    <div class="letter">F</div>
+    <div class="ix"><span class="nm">Frodo Baggins</span><span class="refs tnum">, 1–12</span><p><span class="new">New in 12</span> · Stabbed by a Morgul blade on Weathertop</p></div>
+    <div class="letter">G</div>
+    <div class="ix"><span class="nm">Gandalf</span><span class="refs tnum">, 1–10</span><p class="blur">Something you haven't read yet about him</p>
+      <div class="hidden"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#666A73" stroke-width="2" stroke-linecap="round"><path d="M3 3l18 18M10.6 6.1A10 10 0 0 1 12 6c5 0 9 6 9 6a17 17 0 0 1-2.6 3.2M6.6 6.6C4.3 8.2 3 12 3 12s4 6 9 6a9 9 0 0 0 4.4-1.2"/></svg>1 fact blurred until ch. 13</div></div>
+  </div>
+  <div class="fab"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F6F5F1" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add a note</div>
+  <div class="nav">
+    <div class="on"><div class="pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E2129" stroke-width="2"><path d="M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4z"/></svg></div>Index</div>
+    <div><div class="pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#666A73" stroke-width="2"><circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="9" r="2.5"/><circle cx="11" cy="18" r="2.5"/><path d="M8 8l8 1M7 9l3 7M16.5 11l-4 5"/></svg></div>Map</div>
+    <div><div class="pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#666A73" stroke-width="2"><path d="M7 3v18l5-4 5 4V3z"/></svg></div>Reading</div>
+  </div>
+  <div class="gesture"></div>
+</section></div>
+
+<!-- ======================= K. CLOTH BAND + PAGE ======================= -->
+<div class="col"><div class="cap">K. Cloth header, index page</div>
+<section class="screen k">
+  <div class="band">
+    <div class="status"><span class="tnum">21:47</span><span>●●● ▮</span></div>
+    <div class="row">
+      <div class="cover" style="width:72px;height:106px"><svg width="24" height="24" viewBox="0 0 26 26"><circle cx="13" cy="13" r="10" fill="none" stroke="#C9B77A" stroke-width="1.5"/></svg>The Lord<br>of the Rings</div>
+      <div style="flex:1"><h1>The Lord<br>of the Rings</h1><div class="by">J. R. R. Tolkien</div></div>
+      <span class="iconbtn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E6E9F0" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 20 20"/></svg></span>
+    </div>
+    <div class="prog"><div class="bar"><i></i></div><div class="lbls"><span>Read to <b class="tnum">ch. 12</b>, Flight to the Ford</span><span class="tnum">12 of 22</span></div></div>
+  </div>
+  <div class="list">
+    <div class="h2"><span>INDEX</span><span class="tnum">5 ENTRIES</span></div>
+    <div class="ix"><span class="nm">Aragorn</span><span class="refs tnum">, 10–12</span><p><span class="new">New in 12</span> · Heir of Isildur, though he keeps it quiet</p></div>
+    <div class="ix"><span class="nm">Bree</span><span class="refs tnum">, 9–11</span><p>Place · the Prancing Pony</p></div>
+    <div class="ix"><span class="nm">Frodo Baggins</span><span class="refs tnum">, 1–12</span><p><span class="new">New in 12</span> · Stabbed by a Morgul blade on Weathertop</p></div>
+    <div class="ix"><span class="nm">Gandalf</span><span class="refs tnum">, 1–10</span><p>Leaves a late letter for Frodo with Butterbur</p></div>
+    <div class="mark tnum">Your bookmark · ch. 12</div>
+    <div class="ix later" style="border:0"><span class="nm">Narsil</span><p>Its next fact appears at ch. 13</p></div>
+  </div>
+  <div class="fab"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add a note</div>
+  <div class="nav">
+    <div class="on"><div class="pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E2230" stroke-width="2"><path d="M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4z"/></svg></div>Index</div>
+    <div><div class="pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5F6372" stroke-width="2"><circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="9" r="2.5"/><circle cx="11" cy="18" r="2.5"/><path d="M8 8l8 1M7 9l3 7M16.5 11l-4 5"/></svg></div>Map</div>
+    <div><div class="pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5F6372" stroke-width="2"><path d="M7 3v18l5-4 5 4V3z"/></svg></div>Reading</div>
+  </div>
+  <div class="gesture"></div>
+</section></div>
+
+<!-- ======================= L. DARK INDEX, THUMB TABS ======================= -->
+<div class="col"><div class="cap">L. Dark index with thumb tabs</div>
+<section class="screen l">
+  <div class="status"><span class="tnum">21:47</span><span>●●● ▮</span></div>
+  <div class="head">
+    <span class="iconbtn search"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E8EAF0" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 20 20"/></svg></span>
+    <div class="cover" style="width:96px;height:142px"><svg width="32" height="32" viewBox="0 0 26 26"><circle cx="13" cy="13" r="10" fill="none" stroke="#C9B77A" stroke-width="1.5"/></svg>The Lord<br>of the Rings</div>
+    <h1>The Lord of the Rings</h1>
+    <div class="at">Read to <b class="tnum">ch. 12</b> · Flight to the Ford</div>
+  </div>
+  <div class="thumbs"><span class="has on">A</span><span class="has">B</span><span>C</span><span>D</span><span>E</span><span class="has">F</span><span class="has">G</span><span>H</span><span class="has">N</span></div>
+  <div class="list">
+    <div class="letter">A</div>
+    <div class="ix"><span class="nm">Aragorn</span><span class="refs tnum">, 10–12</span><p><span class="new">New in 12</span> · Heir of Isildur, though he keeps it quiet</p></div>
+    <div class="letter">B</div>
+    <div class="ix"><span class="nm">Bree</span><span class="refs tnum">, 9–11</span><p>Place · the Prancing Pony</p></div>
+    <div class="letter">F</div>
+    <div class="ix"><span class="nm">Frodo Baggins</span><span class="refs tnum">, 1–12</span><p><span class="new">New in 12</span> · Stabbed by a Morgul blade on Weathertop</p></div>
+    <div class="letter">N</div>
+    <div class="ix" style="border:0"><span class="nm">Narsil</span><div class="ph" style="width:80%"></div><div class="lock">Shows at ch. 13</div></div>
+  </div>
+  <div class="fab"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2A120A" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add a note</div>
+  <div class="nav">
+    <div class="on"><div class="pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E8EAF0" stroke-width="2"><path d="M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4z"/></svg></div>Index</div>
+    <div><div class="pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9298A8" stroke-width="2"><circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="9" r="2.5"/><circle cx="11" cy="18" r="2.5"/><path d="M8 8l8 1M7 9l3 7M16.5 11l-4 5"/></svg></div>Map</div>
+    <div><div class="pill"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9298A8" stroke-width="2"><path d="M7 3v18l5-4 5 4V3z"/></svg></div>Reading</div>
+  </div>
+  <div class="gesture"></div>
+</section></div>
+
+</body></html>

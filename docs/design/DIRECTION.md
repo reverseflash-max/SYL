@@ -118,6 +118,25 @@ checkout slip, stamped at each chapter you reach, is a natural "you are
 here", and the clasp gives the spoiler shield something to hold. The
 navy cloth also sits well next to the dark constellation Map.
 
-Why the others lost: G's illuminated initial splits each name ("rodo
+## Exploration (round 4)
+
+Feedback on round 3: too heavily book-themed, and no split initials like
+G's. Keep H's index idea, but show the book's cover where the checkout slip
+was (the real cover art comes later), and drop the clasp. Three quieter
+takes are in `explore/round4-sheet.png` and `explore/round4.html`, all using
+Libre Caslon for names and Instrument Sans for everything else.
+
+- **J. Paper index:** light page, cover beside the title, a "Who is this
+  again?" search box, A-Z letter headings. Spoiler shield: the hidden fact
+  is blurred, with a line saying when it unblurs.
+- **K. Cloth header, index page** (recommended): H's navy cloth survives
+  only as a header band holding the cover and a reading progress bar, and the
+  index sits on a light page. Spoiler shield: a "Your bookmark · ch. 12"
+  divider, with anything past it greyed out.
+- **L. Dark index with thumb tabs:** dark throughout, a large centred cover,
+  and dictionary-style A-Z thumb tabs on the right edge for jumping. Spoiler
+  shield: a placeholder line reading "Shows at ch. 13".
+
+Why the round 3 options lost: G's illuminated initial splits each name ("rodo
 Baggins"), which slows scanning. I is charming, but the handwritten type
 gets hard to read once notes are long.
