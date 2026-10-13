@@ -1,0 +1,164 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&display=block" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #F7F5F0; display: flex; gap: 40px; padding: 40px; align-items: flex-start; font-family: "Bricolage Grotesque", sans-serif; }
+  .col { display:flex; flex-direction: column; }
+  .cap { font: 700 17px "Bricolage Grotesque"; color: #1B2240; margin-top: 16px; }
+  .sub { font: 400 15px "Bricolage Grotesque"; color: #6A6F80; margin-top: 4px; }
+  .screen { width: 360px; height: 780px; border-radius: 36px; position: relative; overflow: hidden; flex: none; background: var(--g); color: var(--ink); box-shadow: 0 20px 50px rgba(0,0,0,.18); }
+  .status { height: 40px; display:flex; justify-content:space-between; align-items:center; padding: 6px 26px 0; font-size: 13px; font-weight: 600; }
+  .tag { display:inline-flex; align-items:center; gap: 5px; font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: 10px; background: rgba(255,255,255,.14); }
+  .grid { display:flex; gap: 8px; padding: 0 16px; }
+  .grid > div { flex:1; display:flex; flex-direction:column; gap: 8px; }
+  .b { border-radius: 22px; padding: 13px; position: relative; }
+  .b h3 { font: 700 19px/1.05 "Libre Caslon Text"; margin-top: 8px; }
+  .b p { font-size: 12px; line-height: 1.35; margin-top: 6px; opacity: .85; }
+  .ico { position:absolute; right: 10px; top: 10px; width: 28px; height: 28px; border-radius: 50%; display:grid; place-items:center; background: rgba(255,255,255,.12); }
+  .nav { position:absolute; left: 50%; bottom: 18px; transform: translateX(-50%); height: 56px; padding: 0 6px; border-radius: 28px; display:flex; align-items:center; gap: 4px; background: var(--navbg); }
+  .nav .sel { height: 44px; padding: 0 14px; border-radius: 22px; display:flex; align-items:center; gap: 6px; font-weight: 700; font-size: 13px; background: var(--navsel); color: var(--navtext); }
+  .nav .it { width: 44px; height: 44px; display:grid; place-items:center; }
+  .nav .add { width: 44px; height: 44px; border-radius: 50%; background: #F5DC7A; display:grid; place-items:center; }
+
+  /* ---------- P. Night watch ---------- */
+  .p { --g:#1B2240; --ink:#F2EEE6; --navbg:#121830; --navsel:#F2EEE6; --navtext:#1B2240; }
+  .p .date { font-size: 13px; color: #A9B0CC; padding: 8px 24px 0; }
+  .p .big { font: 400 76px/1 "Libre Caslon Text"; padding: 4px 24px 0; letter-spacing: -2px; }
+  .p .big small { font-size: 26px; letter-spacing: 0; color: #A9B0CC; margin-right: 6px; }
+  .p .line { font-size: 14px; color: #C9CEE2; padding: 8px 24px 0; line-height: 1.35; }
+  .p .phases { display:flex; justify-content: space-between; padding: 16px 24px 0; }
+  .p .phases div { text-align:center; font-size: 11px; color: #A9B0CC; }
+  .p .phases div.on { color: #F5DC7A; font-weight: 700; }
+  .p .scene { position: relative; height: 150px; margin-top: 6px; }
+  .p .cta { margin: -6px 16px 12px; height: 46px; border-radius: 23px; background: #F5DC7A; color: #1B1A16; display:grid; place-items:center; font-weight: 700; font-size: 15px; position: relative; }
+  .p .sapphire { background: #2C4580; } .p .emerald { background: #235A43; } .p .amethyst { background: #55387E; }
+
+  /* ---------- Q. Wayfarer's road ---------- */
+  .q { --g:#A8432A; --ink:#FBF1E6; --navbg:#7E2F1C; --navsel:#FBF1E6; --navtext:#7E2F1C; }
+  .q .top { padding: 8px 22px 0; display:flex; justify-content:space-between; align-items:flex-start; }
+  .q .top small { font-size: 12px; color: #F3CDB8; }
+  .q .top h1 { font: 700 30px/1 "Bricolage Grotesque"; letter-spacing: -1px; margin-top: 4px; }
+  .q .road { position: relative; height: 250px; margin-top: 4px; }
+  .q .stats { display:flex; justify-content: space-between; padding: 4px 22px 12px; }
+  .q .stats b { font-size: 22px; font-weight: 800; display:block; letter-spacing: -0.5px; }
+  .q .stats span { font-size: 11px; color: #F3CDB8; }
+  .q .b { background: #FBF1E6; color: #3A1A10; }
+  .q .b .tag { background: rgba(58,26,16,.08); }
+  .q .b .ico { background: rgba(58,26,16,.08); }
+
+  /* ---------- R. Paper cut-out ---------- */
+  .r { --g:#D9E86A; --ink:#14223F; --navbg:#14223F; --navsel:#D9E86A; --navtext:#14223F; }
+  .r .cut { position:absolute; right: -30px; top: 30px; }
+  .r .eyebrow { padding: 150px 22px 0; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+  .r h1 { font: 800 50px/0.95 "Bricolage Grotesque"; letter-spacing: -2px; padding: 4px 22px 0; }
+  .r .alias { font: italic 400 15px "Libre Caslon Text"; padding: 6px 22px 0; }
+  .r .stats { display:flex; gap: 22px; padding: 14px 22px 0; }
+  .r .stats b { font-size: 20px; font-weight: 800; display:block; }
+  .r .stats span { font-size: 11px; }
+  .r .note { padding: 12px 22px 0; font-size: 13px; line-height: 1.4; }
+  .r .note b { display:block; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+  .r .more { display:flex; gap: 8px; padding: 14px 16px 0; }
+  .r .more .b { flex: 1; background: #14223F; color: #F2F5D6; padding: 11px; }
+  .r .more .b h3 { font-size: 16px; }
+  .r .more .b .ico { background: rgba(255,255,255,.12); }
+</style></head>
+<body>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+  <symbol id="g-char" viewBox="0 0 100 100"><path d="M50 6c-16 0-26 14-26 30 0 7 2 13 6 17-13 8-21 23-22 41h84c-1-18-9-33-22-41 4-4 6-10 6-17 0-16-10-30-26-30zM37 40q13 16 26 0" fill="none" stroke="currentColor" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+  <symbol id="g-place" viewBox="0 0 100 100"><path d="M26 94V40h48v54zM20 40V14h13v10h11V14h12v10h11V14h13v26M42 94V74a8 8 0 0 1 16 0v20" fill="none" stroke="currentColor" stroke-width="8" stroke-linejoin="round"/></symbol>
+  <symbol id="g-item" viewBox="0 0 100 100"><path d="M84 8l8 8-48 50-10-10zM22 52l26 26M34 66L14 86M8 92l4-4" fill="none" stroke="currentColor" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+</defs></svg>
+
+<!-- ======================= P. NIGHT WATCH ======================= -->
+<div class="col">
+<section class="screen p">
+  <div class="status"><span>21:47</span><span>●●● ▮</span></div>
+  <div class="date">The Lord of the Rings · Book one</div>
+  <div class="big"><small>ch.</small>12</div>
+  <div class="line">Flight to the Ford. Two new faces tonight; nothing past here can reach you.</div>
+  <div class="phases">
+    <div><svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#F2EEE6"/></svg>9</div>
+    <div><svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#F2EEE6"/></svg>10</div>
+    <div><svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#F2EEE6"/></svg>11</div>
+    <div class="on"><svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#F5DC7A"/></svg>12, you</div>
+    <div><svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="#5A6289" stroke-width="1.5" stroke-dasharray="2 3"/></svg>13</div>
+  </div>
+  <div class="scene">
+    <svg width="360" height="150" viewBox="0 0 360 150">
+      <g fill="#F2EEE6"><circle cx="60" cy="20" r="1.2"/><circle cx="140" cy="34" r="1"/><circle cx="210" cy="14" r="1.4"/><circle cx="300" cy="30" r="1"/><circle cx="330" cy="10" r="1.2"/></g>
+      <g stroke="#86D6C6" stroke-width="1" opacity=".7"><line x1="250" y1="40" x2="290" y2="60"/><line x1="250" y1="40" x2="220" y2="70"/></g>
+      <g fill="#F2EEE6"><circle cx="250" cy="40" r="3.5"/><circle cx="290" cy="60" r="2.5"/><circle cx="220" cy="70" r="2.5"/></g>
+      <path d="M0 110 C 60 80, 110 100, 160 90 S 260 70, 360 95 V150 H0z" fill="#2A3360"/>
+      <path d="M0 128 C 70 110, 140 132, 220 118 S 320 112, 360 120 V150 H0z" fill="#121830"/>
+      <g fill="#121830"><rect x="70" y="72" width="22" height="50"/><path d="M66 72h30l-4-8h-22z"/><path d="M66 64v-8h6v4h6v-4h6v4h6v-4h6v8z"/></g>
+      <rect x="77" y="86" width="8" height="10" rx="4" fill="#F5DC7A"/>
+      <g fill="#121830"><path d="M180 120l10-30 10 30z"/><path d="M196 122l9-24 9 24z"/><path d="M300 120l8-22 8 22z"/></g>
+    </svg>
+  </div>
+  <div class="cta">I finished ch. 12</div>
+  <div class="grid">
+    <div><div class="b sapphire"><span class="tag">Character · new</span><span class="ico" style="color:#F2EEE6"><svg width="15" height="15"><use href="#g-char"/></svg></span><h3>Aragorn</h3><p>Heir of Isildur, though he keeps it quiet.</p></div></div>
+    <div><div class="b emerald"><span class="tag">Place</span><span class="ico" style="color:#F2EEE6"><svg width="15" height="15"><use href="#g-place"/></svg></span><h3>Bree</h3><p>Men and hobbits live side by side.</p></div></div>
+  </div>
+  <div class="nav"><span class="sel">▦ Library</span><span class="it" style="color:#F2EEE6">✦</span><span class="it" style="color:#F2EEE6">❏</span><span class="add">+</span></div>
+</section>
+<div class="cap">P. Night watch</div><div class="sub">A reading companion as a night drawing in. Your chapter<br>is the moon; tonight's new faces rise as stars.</div>
+</div>
+
+<!-- ======================= Q. WAYFARER'S ROAD ======================= -->
+<div class="col">
+<section class="screen q">
+  <div class="status"><span>21:47</span><span>●●● ▮</span></div>
+  <div class="top"><div><small>The Lord of the Rings · your journey</small><h1>Ch. 12 of 22</h1></div></div>
+  <div class="road">
+    <svg width="360" height="250" viewBox="0 0 360 250">
+      <path d="M30 230 C 90 220, 60 170, 130 160 S 250 170, 240 110 S 140 60, 220 40 S 330 30, 340 20" fill="none" stroke="#C9644A" stroke-width="22" stroke-linecap="round"/>
+      <path d="M30 230 C 90 220, 60 170, 130 160 S 250 170, 240 110" fill="none" stroke="#FBF1E6" stroke-width="3" stroke-dasharray="1 9" stroke-linecap="round"/>
+      <path d="M240 110 S 140 60, 220 40 S 330 30, 340 20" fill="none" stroke="#E7A58F" stroke-width="2" stroke-dasharray="1 9" stroke-linecap="round" opacity=".6"/>
+      <g font-family="Bricolage Grotesque" font-size="11" fill="#FBF1E6">
+        <circle cx="30" cy="230" r="4" fill="#FBF1E6"/><text x="40" y="244">ch. 1 · Bag End</text>
+        <circle cx="130" cy="160" r="4" fill="#FBF1E6"/><text x="100" y="186">ch. 9 · Bree</text>
+      </g>
+      <g transform="translate(240 110)"><circle r="14" fill="#F5DC7A" opacity=".3"/><circle r="7" fill="#F5DC7A"/></g>
+      <text x="256" y="128" font-family="Bricolage Grotesque" font-size="12" font-weight="700" fill="#F5DC7A">You · ch. 12</text>
+      <text x="230" y="22" font-family="Libre Caslon Text" font-style="italic" font-size="12" fill="#F3CDB8">road ahead unread</text>
+    </svg>
+  </div>
+  <div class="stats"><div><b>5</b><span>met</span></div><div><b>10</b><span>facts</span></div><div><b>3</b><span>links</span></div><div><b>1</b><span>waiting ahead</span></div></div>
+  <div class="grid">
+    <div><div class="b"><span class="tag">Character · new</span><span class="ico"><svg width="15" height="15"><use href="#g-char"/></svg></span><h3>Aragorn</h3><p>Heir of Isildur, though he keeps it quiet.</p></div></div>
+    <div><div class="b"><span class="tag">Character · new</span><span class="ico"><svg width="15" height="15"><use href="#g-char"/></svg></span><h3>Frodo</h3><p>Stabbed by a Morgul blade on Weathertop.</p></div></div>
+  </div>
+  <div class="nav"><span class="sel">▦ Library</span><span class="it" style="color:#FBF1E6">✦</span><span class="it" style="color:#FBF1E6">❏</span><span class="add">+</span></div>
+</section>
+<div class="cap">Q. Wayfarer's road</div><div class="sub">A reading companion as a road through the book.<br>Where you met everyone; the rest of the road unread.</div>
+</div>
+
+<!-- ======================= R. PAPER CUT-OUT ======================= -->
+<div class="col">
+<section class="screen r">
+  <div class="status"><span>21:47</span><span>●●● ▮</span></div>
+  <svg class="cut" width="240" height="230" viewBox="0 0 240 230">
+    <circle cx="190" cy="40" r="26" fill="#14223F"/><circle cx="202" cy="32" r="24" fill="#D9E86A"/>
+    <path d="M60 230 V120 h-8 v-20 h10 v8 h10 v-8 h10 v8 h10 v-8 h10 v20 h-8 V150 h40 V90 h-8 v-20 h10 v8 h10 v-8 h10 v8 h10 v-8 h10 v20 h-8 V230 Z" fill="#14223F"/>
+    <path d="M118 70 L138 30 L158 70 Z" fill="#14223F"/><path d="M50 100 L72 66 L94 100 Z" fill="#14223F"/>
+    <rect x="134" y="104" width="10" height="16" rx="5" fill="#D9E86A"/><rect x="70" y="130" width="8" height="14" rx="4" fill="#D9E86A"/><path d="M100 230 v-26 a12 12 0 0 1 24 0 v26z" fill="#D9E86A"/>
+  </svg>
+  <div class="eyebrow">New this chapter · Character</div>
+  <h1>Aragorn</h1>
+  <div class="alias">called Strider, at Bree</div>
+  <div class="stats"><div><b>4</b><span>facts</span></div><div><b>Ch. 10</b><span>first met</span></div><div><b>3</b><span>links</span></div></div>
+  <div class="note"><b>Latest, ch. 12</b>Heir of Isildur, though he keeps it quiet.</div>
+  <div class="more">
+    <div class="b"><span class="ico" style="color:#F2F5D6"><svg width="14" height="14"><use href="#g-char"/></svg></span><h3>Frodo</h3><p>New in 12</p></div>
+    <div class="b"><span class="ico" style="color:#F2F5D6"><svg width="14" height="14"><use href="#g-place"/></svg></span><h3>Bree</h3><p>Place</p></div>
+    <div class="b"><span class="ico" style="color:#F2F5D6"><svg width="14" height="14"><use href="#g-item"/></svg></span><h3>Narsil</h3><p>Item</p></div>
+  </div>
+  <div class="nav"><span class="sel">▦ Library</span><span class="it" style="color:#D9E86A">✦</span><span class="it" style="color:#D9E86A">❏</span><span class="add">+</span></div>
+</section>
+<div class="cap">R. Paper cut-out</div><div class="sub">A reading companion as a cut-paper poster.<br>Whoever is new this chapter takes the stage.</div>
+</div>
+
+</body></html>
