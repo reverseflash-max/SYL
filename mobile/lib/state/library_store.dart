@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 
 import '../data/storage.dart';
@@ -438,6 +440,27 @@ class LibraryStore extends ChangeNotifier {
       }
     }
     await _saveBooks();
+  }
+
+  /// The photo you chose as [b]'s cover, if it is on this device.
+  File? coverFileFor(Book b) => _storage?.coverFile(b.coverFile);
+
+  /// Uses a photo you picked as [b]'s cover.
+  Future<void> setOwnCover(Book b, List<int> bytes, String extension) async {
+    final storage = _storage;
+    if (storage == null) return;
+    final old = b.coverFile;
+    final name = await storage.saveCover(b.id, bytes, extension);
+    final current = _books.where((x) => x.id == b.id).firstOrNull ?? b;
+    await updateBook(current.copyWith(coverFile: name));
+    await storage.deleteCover(old);
+  }
+
+  /// Goes back to the Open Library cover.
+  Future<void> clearOwnCover(Book b) async {
+    final current = _books.where((x) => x.id == b.id).firstOrNull ?? b;
+    await _storage?.deleteCover(current.coverFile);
+    await updateBook(current.copyWith(clearCoverFile: true));
   }
 
   final Set<String> _coverTried = {};

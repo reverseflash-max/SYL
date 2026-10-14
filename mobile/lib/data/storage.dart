@@ -143,6 +143,28 @@ class SylStorage {
 
   Future<void> saveBooks(List<Book> books) => _writeJson(_booksFile, books.map((b) => b.toJson()).toList());
 
+  /// Saves a cover photo for a book as `covers/<id>-<time>.<ext>` (a new name
+  /// each time, so the new picture shows at once) and returns that name.
+  Future<String> saveCover(String bookId, List<int> bytes, String extension) async {
+    final dir = Directory(_join(root.path, 'covers'));
+    await dir.create(recursive: true);
+    final name = 'covers/$bookId-${DateTime.now().millisecondsSinceEpoch}.$extension';
+    await File(_join(root.path, name.replaceAll('/', Platform.pathSeparator))).writeAsBytes(bytes);
+    return name;
+  }
+
+  /// The file for a saved cover name, if it is on this device.
+  File? coverFile(String? name) {
+    if (name == null || !RegExp(r'^covers/[A-Za-z0-9_.-]+$').hasMatch(name)) return null;
+    final f = File(_join(root.path, name.replaceAll('/', Platform.pathSeparator)));
+    return f.existsSync() ? f : null;
+  }
+
+  Future<void> deleteCover(String? name) async {
+    final f = coverFile(name);
+    if (f != null) await f.delete();
+  }
+
   // ---- deletions (for sync) ------------------------------------------------
 
   Future<DeletedLog> loadDeleted() async {

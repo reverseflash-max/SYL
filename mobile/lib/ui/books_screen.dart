@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../models/models.dart';
@@ -262,6 +263,7 @@ class BookCoverImage extends StatelessWidget {
     }
     final h = width * 1.5;
     final placeholder = _placeholder(context, h);
+    final own = context.watch<LibraryStore>().coverFileFor(book);
     return ExcludeSemantics(
       child: Container(
         width: width,
@@ -271,7 +273,9 @@ class BookCoverImage extends StatelessWidget {
           boxShadow: [BoxShadow(color: Color(0x66000000), blurRadius: 14, offset: Offset(0, 6))],
         ),
         clipBehavior: Clip.antiAlias,
-        child: book.coverUrl == null
+        child: own != null
+            ? Image.file(own, fit: BoxFit.cover, errorBuilder: (_, __, ___) => placeholder)
+            : book.coverUrl == null
             ? placeholder
             : Image.network(
                 book.coverUrl!,
@@ -425,7 +429,7 @@ class _BookSheetState extends State<_BookSheet> {
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Expanded(child: Text(widget.book.title, style: Theme.of(context).textTheme.headlineMedium)),
           const SizedBox(width: 12),
-          BookCoverImage(book: store.bookList.where((b) => b.id == widget.book.id).firstOrNull ?? widget.book, width: 64),
+          _CoverButton(book: store.bookList.where((b) => b.id == widget.book.id).firstOrNull ?? widget.book),
         ]),
         const SizedBox(height: 14),
         TextField(controller: _title, textCapitalization: TextCapitalization.words, decoration: const InputDecoration(labelText: 'Title')),
@@ -706,6 +710,83 @@ class BookPicker extends StatelessWidget {
         dropFocus();
         onChanged(v);
       },
+    );
+  }
+}
+
+/// The cover in a book's sheet: tap it to use a photo of your own copy, or to
+/// go back to the Open Library cover.
+class _CoverButton extends StatelessWidget {
+  const _CoverButton({required this.book});
+  final Book book;
+
+  Future<void> _change(BuildContext context) async {
+    final store = context.read<LibraryStore>();
+    final hasOwn = store.coverFileFor(book) != null;
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      builder: (sheet) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(
+            leading: const Icon(Icons.photo_library_outlined),
+            title: const Text('Choose a photo'),
+            onTap: () => Navigator.pop(sheet, 'gallery'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_camera_outlined),
+            title: const Text('Take a photo of your copy'),
+            onTap: () => Navigator.pop(sheet, 'camera'),
+          ),
+          if (hasOwn)
+            ListTile(
+              leading: const Icon(Icons.restore),
+              title: const Text('Use the Open Library cover'),
+              onTap: () => Navigator.pop(sheet, 'reset'),
+            ),
+        ]),
+      ),
+    );
+    if (choice == null) return;
+    try {
+      if (choice == 'reset') {
+        await store.clearOwnCover(book);
+        return;
+      }
+      final picked = await ImagePicker().pickImage(
+        source: choice == 'camera' ? ImageSource.camera : ImageSource.gallery,
+        maxWidth: 800, // a cover never needs more; keeps the data folder small
+        imageQuality: 85,
+      );
+      if (picked == null) return;
+      final ext = picked.name.contains('.') ? picked.name.split('.').last.toLowerCase() : 'jpg';
+      await store.setOwnCover(book, await picked.readAsBytes(), RegExp(r'^[a-z0-9]{2,4}$').hasMatch(ext) ? ext : 'jpg');
+    } catch (e) {
+      if (context.mounted) showMessage(context, "Couldn't use that picture: $e");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Change the cover',
+      child: InkWell(
+        onTap: () => _change(context),
+        borderRadius: BorderRadius.circular(8),
+        child: Stack(clipBehavior: Clip.none, children: [
+          BookCoverImage(book: book, width: 64),
+          Positioned(
+            right: -6,
+            bottom: -6,
+            child: Container(
+              width: 26,
+              height: 26,
+              decoration: const BoxDecoration(color: Syl.accent, shape: BoxShape.circle),
+              child: const Icon(Icons.edit, size: 15, color: Syl.onAccent),
+            ),
+          ),
+        ]),
+      ),
     );
   }
 }

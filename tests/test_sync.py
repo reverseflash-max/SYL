@@ -114,6 +114,11 @@ class BookMergeTests(unittest.TestCase):
         out = syl_sync.merge_libraries(pc, phone)
         self.assertEqual([(b["id"], b["chapter"]) for b in out["books"]], [("mistborn", 3), ("lotr", 12)])
 
+    def test_a_chosen_cover_survives_the_pc(self):
+        phone = {**lib(), "books": [{**book("lotr", "LOTR", 3, "2026-10-02T10:00:00"), "cover_file": "covers/lotr-1.jpg"}]}
+        (b,) = syl_sync.merge_libraries(lib(), phone)["books"]
+        self.assertEqual(b["cover_file"], "covers/lotr-1.jpg")
+
     def test_deleted_book_stays_deleted(self):
         pc = {**lib(), "books": [book("lotr", "The Lord of the Rings", 10, "2026-10-01T10:00:00")]}
         phone = lib(deleted={"books": {"lotr": "2026-10-02T10:00:00"}})

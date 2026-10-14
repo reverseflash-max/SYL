@@ -404,6 +404,10 @@ class Book {
 
   /// Open Library cover id: the image is [coverUrl].
   final int? coverId;
+
+  /// A cover photo you chose, saved in the data folder (e.g. covers/lotr-1712.jpg).
+  /// It stays on the device it was chosen on; elsewhere the Open Library cover shows.
+  final String? coverFile;
   final String updatedAt;
 
   const Book({
@@ -417,6 +421,7 @@ class Book {
     this.rating,
     this.openLibraryKey,
     this.coverId,
+    this.coverFile,
     this.updatedAt = '',
   });
 
@@ -443,6 +448,7 @@ class Book {
       rating: rating != null && rating >= 1 && rating <= 5 ? rating : null,
       openLibraryKey: _pick<String>(j, ['open_library_key']),
       coverId: j['cover_id'] is num ? (j['cover_id'] as num).toInt() : null,
+      coverFile: _pick<String>(j, ['cover_file']),
       updatedAt: _str(j, ['updated_at']),
     );
   }
@@ -458,6 +464,7 @@ class Book {
         'rating': rating,
         'open_library_key': openLibraryKey,
         'cover_id': coverId,
+        'cover_file': coverFile,
         'updated_at': updatedAt,
       };
 
@@ -474,6 +481,8 @@ class Book {
     bool clearRating = false,
     String? openLibraryKey,
     int? coverId,
+    String? coverFile,
+    bool clearCoverFile = false,
     String? updatedAt,
   }) =>
       Book(
@@ -487,6 +496,7 @@ class Book {
         rating: clearRating ? null : (rating ?? this.rating),
         openLibraryKey: openLibraryKey ?? this.openLibraryKey,
         coverId: coverId ?? this.coverId,
+        coverFile: clearCoverFile ? null : (coverFile ?? this.coverFile),
         updatedAt: updatedAt ?? this.updatedAt,
       );
 }

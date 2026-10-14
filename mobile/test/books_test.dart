@@ -78,6 +78,14 @@ void main() {
     expect(store.settings.currentBook, 'Mistborn');
   });
 
+  test('a cover you chose is remembered with the book', () {
+    const b = Book(id: 'lotr', title: 'LOTR', coverId: 14627060, coverFile: 'covers/lotr-1.jpg');
+    final back = Book.fromJson(b.toJson());
+    expect(back.coverFile, 'covers/lotr-1.jpg');
+    expect(back.coverId, 14627060); // the Open Library one stays as the fallback
+    expect(back.copyWith(clearCoverFile: true).coverFile, isNull);
+  });
+
   test('Open Library tables of contents are cleaned down to the chapters', () {
     // Shapes taken from real Open Library editions.
     expect(
