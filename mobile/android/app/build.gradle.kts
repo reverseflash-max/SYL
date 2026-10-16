@@ -67,3 +67,8 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // FileProvider, to hand the share card to Instagram.
+    implementation("androidx.core:core:1.13.1")
+}

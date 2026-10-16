@@ -19,7 +19,10 @@ class SyncResult {
   final List<Entity> entities;
   final List<Relationship> relationships;
   final DeletedLog deleted;
-  const SyncResult(this.entities, this.relationships, this.deleted);
+
+  /// Null when the PC's SYL is older and doesn't sync books yet.
+  final List<Book>? books;
+  const SyncResult(this.entities, this.relationships, this.deleted, [this.books]);
 }
 
 class SyncService {
@@ -69,12 +72,14 @@ class SyncService {
     required List<Entity> entities,
     required List<Relationship> relationships,
     required DeletedLog deleted,
+    List<Book> books = const [],
   }) async {
     final body = jsonEncode({
       'schema_version': kSchemaVersion,
       'entities': entities.map((e) => e.toJson()).toList(),
       'relationships': relationships.map((r) => r.toJson()).toList(),
       'deleted': deleted.toJson(),
+      'books': books.map((b) => b.toJson()).toList(),
     });
     final http.Response r;
     try {
@@ -100,7 +105,10 @@ class SyncService {
           .where((r) => r.source.isNotEmpty && r.target.isNotEmpty)
           .toList();
       final del = DeletedLog.fromJson((j['deleted'] as Map?)?.cast<String, dynamic>() ?? const {});
-      return SyncResult(ents, rels, del);
+      final books = j['books'] is List
+          ? (j['books'] as List).whereType<Map<String, dynamic>>().map(Book.fromJson).where((b) => b.title.isNotEmpty).toList()
+          : null;
+      return SyncResult(ents, rels, del, books);
     } catch (_) {
       throw SyncException('The PC sent back something SYL could not read. Nothing was changed.');
     }

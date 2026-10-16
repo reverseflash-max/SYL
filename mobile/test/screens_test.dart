@@ -49,7 +49,7 @@ void main() {
     expect(find.text('Library'), findsWidgets);
     expect(find.text('Galadriel'), findsOneWidget);
     expect(find.text('Aragorn'), findsOneWidget);
-    expect(find.textContaining('Ch. 5'), findsWidgets);
+    expect(find.textContaining('ch. 5'), findsWidgets); // the big chapter and "I finished ch. 5"
 
     // Entity screen: facts, spoiler hiding, link, mention
     await tester.tap(find.text('Aragorn'));
@@ -85,22 +85,37 @@ void main() {
     await tester.tap(find.text('Aragorn').first);
     await tester.pumpAndSettle();
 
-    // Reading / settings
+    // Books: the book, its chapter, and moving it on
     await tester.tap(find.byIcon(Icons.menu_book_outlined));
     await tester.pumpAndSettle();
-    expect(find.text('Spoiler shield'), findsOneWidget);
+    expect(find.text('The Lord of the Rings'), findsWidgets);
+    expect(find.text('Ch. 5'), findsOneWidget);
+    await tester.tap(find.byTooltip('Next chapter of The Lord of the Rings'));
+    await tester.pumpAndSettle();
+    expect(store.chapterFor('The Lord of the Rings'), 6);
+
+    // Settings: AI and sync
+    await tester.tap(find.byIcon(Icons.tune));
+    await tester.pumpAndSettle();
     expect(find.text('AI on your PC'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Sync with your PC'), 200,
         scrollable: find.ancestor(of: find.text('AI on your PC'), matching: find.byType(Scrollable)).first);
     expect(find.text('Sync now'), findsOneWidget);
 
-    // Global quick add creates a new entity
-    await tester.tap(find.byTooltip('Add a fact'));
+    // The + menu: a new fact creates a new entity in the chosen book
+    await tester.tap(find.byTooltip('Add'));
+    await tester.pumpAndSettle();
+    expect(find.text('New book'), findsOneWidget);
+    expect(find.text('New character'), findsOneWidget);
+    await tester.tap(find.text('New fact'));
     await tester.pumpAndSettle();
     await tester.enterText(find.widgetWithText(TextField, 'About'), 'Samwise Gamgee');
     await tester.enterText(find.widgetWithText(TextField, 'Fact'), 'He is a gardener');
     await tester.tap(find.text('Save fact'));
     await tester.pumpAndSettle();
-    expect(store.byName('Samwise Gamgee')!.facts.single.text, 'He is a gardener');
+    final sam = store.byName('Samwise Gamgee')!;
+    expect(sam.facts.single.text, 'He is a gardener');
+    expect(sam.facts.single.chapter, 6); // starts at how far you've read the book
+    expect(sam.book, 'The Lord of the Rings');
   });
 }

@@ -5,6 +5,7 @@ import '../models/models.dart';
 import '../services/wikidata_service.dart';
 import '../state/library_store.dart';
 import '../theme/syl_theme.dart';
+import 'books_screen.dart' show BookPicker;
 import 'widgets/common.dart';
 
 Future<T?> _sheet<T>(BuildContext context, Widget child) => showModalBottomSheet<T>(
@@ -36,15 +37,23 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
   final _chapter = TextEditingController();
   final _name = TextEditingController();
   Entity? _target;
+  String? _book; // for a new entry; an existing one keeps its own book
   bool _saving = false;
 
   @override
   void initState() {
     super.initState();
     _target = widget.entity;
-    final cap = context.read<LibraryStore>().spoilerChapter;
-    _chapter.text = '${cap ?? 1}';
+    final store = context.read<LibraryStore>();
+    _book = widget.entity?.book ?? store.settings.currentBook;
+    _chapter.text = '${store.chapterFor(_book) ?? 1}';
   }
+
+  /// The fact's chapter starts at how far you've read its book.
+  void _setBook(String? book) => setState(() {
+        _book = book;
+        _chapter.text = '${context.read<LibraryStore>().chapterFor(book) ?? 1}';
+      });
 
   @override
   void dispose() {
@@ -71,7 +80,7 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
         showMessage(context, 'Pick who or what this fact is about.');
         return;
       }
-      target = store.byName(name) ?? await store.createEntity(name: name, type: 'Other', chapter: ch);
+      target = store.byName(name) ?? await store.createEntity(name: name, type: 'Other', book: _book, chapter: ch);
     }
     await store.addFact(target, text, ch);
     if (!mounted) return;
@@ -91,7 +100,10 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
         if (widget.entity == null) ...[
           if (_target != null)
             Row(children: [
-              SoftTag('About ${_target!.name}', dot: Syl.typeDot(_target!.type), background: Syl.white),
+              Flexible(
+                child: SoftTag('About ${_target!.name}${_target!.book != null ? ' · ${_target!.book}' : ''}',
+                    dot: Syl.typeDot(_target!.type), background: Syl.white),
+              ),
               const SizedBox(width: 8),
               TextButton(onPressed: () => setState(() => _target = null), child: const Text('Change')),
             ])
@@ -111,9 +123,14 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
                 for (final e in store.entities
                     .where((e) => e.name.toLowerCase().contains(_name.text.trim().toLowerCase()))
                     .take(5))
-                  FilterPill(label: e.name, dot: Syl.typeDot(e.type), selected: false, onTap: () => setState(() => _target = e)),
+                  FilterPill(label: e.name, dot: Syl.typeDot(e.type), selected: false, onTap: () {
+                    _setBook(e.book);
+                    setState(() => _target = e);
+                  }),
               ]),
             ],
+            const SizedBox(height: 12),
+            BookPicker(value: _book, onChanged: _setBook),
           ],
           const SizedBox(height: 12),
         ],
@@ -139,7 +156,7 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
           FilledButton(
             onPressed: _saving ? null : _save,
             child: _saving
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Syl.paper))
+                ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Syl.paper))
                 : const Text('Save fact'),
           ),
         ]),
@@ -175,7 +192,7 @@ class _LinkSheetState extends State<_LinkSheet> {
   @override
   void initState() {
     super.initState();
-    final cap = context.read<LibraryStore>().spoilerChapter;
+    final cap = context.read<LibraryStore>().capFor(widget.source);
     if (cap != null) _chapter.text = '$cap';
   }
 
@@ -199,7 +216,7 @@ class _LinkSheetState extends State<_LinkSheet> {
           _target == null
               ? 'Pick who or what they are connected to.'
               : '${widget.source.name} is $_type of ${_target!.name}',
-          style: const TextStyle(color: Syl.muted),
+          style: TextStyle(color: Syl.muted),
         ),
         const SizedBox(height: 16),
         SizedBox(
@@ -273,13 +290,12 @@ class _EditSheet extends StatefulWidget {
 
 class _EditSheetState extends State<_EditSheet> {
   late final _name = TextEditingController(text: widget.entity.name);
-  late final _book = TextEditingController(text: widget.entity.book ?? '');
+  late String? _book = widget.entity.book;
   late String _type = widget.entity.type;
 
   @override
   void dispose() {
     _name.dispose();
-    _book.dispose();
     super.dispose();
   }
 
@@ -295,7 +311,7 @@ class _EditSheetState extends State<_EditSheet> {
         const SizedBox(height: 12),
         TypePicker(value: _type, onChanged: (t) => setState(() => _type = t)),
         const SizedBox(height: 12),
-        TextField(controller: _book, decoration: const InputDecoration(labelText: 'Book')),
+        BookPicker(value: _book, onChanged: (b) => setState(() => _book = b)),
         const SizedBox(height: 20),
         Row(children: [
           TextButton.icon(
@@ -307,7 +323,7 @@ class _EditSheetState extends State<_EditSheet> {
                   content: const Text('Its facts and links go too. This cannot be undone.'),
                   actions: [
                     TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Cancel')),
-                    TextButton(onPressed: () => Navigator.pop(d, true), child: const Text('Delete', style: TextStyle(color: Syl.danger))),
+                    TextButton(onPressed: () => Navigator.pop(d, true), child: Text('Delete', style: TextStyle(color: Syl.danger))),
                   ],
                 ),
               );
@@ -319,20 +335,19 @@ class _EditSheetState extends State<_EditSheet> {
                   ..pop();
               }
             },
-            icon: const Icon(Icons.delete_outline, color: Syl.danger),
-            label: const Text('Delete', style: TextStyle(color: Syl.danger)),
+            icon: Icon(Icons.delete_outline, color: Syl.danger),
+            label: Text('Delete', style: TextStyle(color: Syl.danger)),
           ),
           const Spacer(),
           FilledButton(
             onPressed: () async {
               final name = _name.text.trim();
               if (name.isEmpty) return;
-              final book = _book.text.trim();
               await store.updateEntity(widget.entity.copyWith(
                 name: name,
                 type: _type,
-                book: book.isEmpty ? null : book,
-                clearBook: book.isEmpty,
+                book: _book,
+                clearBook: _book == null,
               ));
               if (context.mounted) Navigator.pop(context);
             },
@@ -404,7 +419,7 @@ class _WikidataSheetState extends State<_WikidataSheet> {
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Text('Wikidata', style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 4),
-          Text('Results for "${widget.query}". Pick the right one.', style: const TextStyle(color: Syl.muted)),
+          Text('Results for "${widget.query}". Pick the right one.', style: TextStyle(color: Syl.muted)),
           const SizedBox(height: 12),
           Flexible(
             child: FutureBuilder<List<WikidataCandidate>>(

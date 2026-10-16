@@ -151,11 +151,15 @@ class ExternalData {
   final List<String> aliases;
   final List<String> instanceOf;
 
+  /// Spoiler-safe details from Wikidata, as "Label: value" lines.
+  final List<String> safeFacts;
+
   const ExternalData({
     this.wikidataId,
     this.description = '',
     this.aliases = const [],
     this.instanceOf = const [],
+    this.safeFacts = const [],
   });
 
   factory ExternalData.fromJson(Map<String, dynamic>? j) {
@@ -166,6 +170,7 @@ class ExternalData {
       description: _str(j, ['description']),
       aliases: (_pick<List>(j, ['aliases']) ?? const []).map((e) => e.toString()).toList(),
       instanceOf: (_pick<List>(j, ['instance_of']) ?? const []).map((e) => e.toString()).toList(),
+      safeFacts: (_pick<List>(j, ['safe_facts']) ?? const []).map((e) => e.toString()).toList(),
     );
   }
 
@@ -174,6 +179,7 @@ class ExternalData {
         'description': description,
         'aliases': aliases,
         'instance_of': instanceOf,
+        'safe_facts': safeFacts,
       };
 }
 
@@ -367,17 +373,152 @@ class Relationship {
   String other(String id) => source == id ? target : source;
 }
 
+/// Whether two book titles name the same book: capitals and stray spaces
+/// don't count ("mistborn" is "Mistborn").
+bool sameTitle(String? a, String? b) => a != null && b != null && a.trim().toLowerCase() == b.trim().toLowerCase();
+
+/// A book you're reading, have read or want to read (data/books.json).
+/// Entries point at a book by its title ([Entity.book]). Each book keeps its
+/// own chapter, and that is the spoiler shield for the entries in it.
+class Book {
+  final String id;
+  final String title;
+  final String author;
+
+  /// How many chapters the book has, if known (for progress).
+  final int? totalChapters;
+
+  /// Chapter titles from Open Library, if it had them: [chapterNames][0] is chapter 1.
+  final List<String> chapterNames;
+
+  /// Read up to this chapter. Nothing later is shown or sent to the AI.
+  /// Null means the shield is off for this book.
+  final int? chapter;
+
+  /// 'reading', 'finished' or 'want'.
+  final String status;
+
+  /// 0.5 to 5 stars in half stars, once you've rated it.
+  final double? rating;
+  final String? openLibraryKey;
+
+  /// Open Library cover id: the image is [coverUrl].
+  final int? coverId;
+
+  /// A cover photo you chose, saved in the data folder (e.g. covers/lotr-1712.jpg).
+  /// It stays on the device it was chosen on; elsewhere the Open Library cover shows.
+  final String? coverFile;
+  final String updatedAt;
+
+  const Book({
+    required this.id,
+    required this.title,
+    this.author = '',
+    this.totalChapters,
+    this.chapterNames = const [],
+    this.chapter,
+    this.status = 'reading',
+    this.rating,
+    this.openLibraryKey,
+    this.coverId,
+    this.coverFile,
+    this.updatedAt = '',
+  });
+
+  String? get coverUrl => coverId == null ? null : 'https://covers.openlibrary.org/b/id/$coverId-M.jpg';
+
+  static const statuses = ['reading', 'want', 'finished'];
+
+  /// The name of chapter [c], if Open Library had it.
+  String? chapterName(int c) => c >= 1 && c <= chapterNames.length ? chapterNames[c - 1] : null;
+
+  factory Book.fromJson(Map<String, dynamic> j) {
+    final title = _str(j, ['title']).trim();
+    final status = _str(j, ['status'], 'reading');
+    final rating = j['rating'] is num ? ((j['rating'] as num) * 2).round() / 2 : null;
+    final total = j['total_chapters'] is num ? (j['total_chapters'] as num).toInt() : null;
+    return Book(
+      id: _str(j, ['id'], slugify(title)),
+      title: title,
+      author: _str(j, ['author']),
+      totalChapters: total != null && total > 0 ? total : null,
+      chapterNames: (_pick<List>(j, ['chapter_names']) ?? const []).map((e) => e.toString()).toList(),
+      chapter: j['chapter'] == null ? null : parseChapter(j['chapter']),
+      status: statuses.contains(status) ? status : 'reading',
+      rating: rating != null && rating >= 0.5 && rating <= 5 ? rating : null,
+      openLibraryKey: _pick<String>(j, ['open_library_key']),
+      coverId: j['cover_id'] is num ? (j['cover_id'] as num).toInt() : null,
+      coverFile: _pick<String>(j, ['cover_file']),
+      updatedAt: _str(j, ['updated_at']),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'author': author,
+        'total_chapters': totalChapters,
+        'chapter_names': chapterNames,
+        'chapter': chapter,
+        'status': status,
+        // Whole stars stay whole numbers (4, not 4.0), as older versions wrote them.
+        'rating': rating != null && rating! % 1 == 0 ? rating!.toInt() : rating,
+        'open_library_key': openLibraryKey,
+        'cover_id': coverId,
+        'cover_file': coverFile,
+        'updated_at': updatedAt,
+      };
+
+  Book copyWith({
+    String? title,
+    String? author,
+    int? totalChapters,
+    bool clearTotal = false,
+    List<String>? chapterNames,
+    int? chapter,
+    bool clearChapter = false,
+    String? status,
+    double? rating,
+    bool clearRating = false,
+    String? openLibraryKey,
+    int? coverId,
+    String? coverFile,
+    bool clearCoverFile = false,
+    String? updatedAt,
+  }) =>
+      Book(
+        id: id,
+        title: title ?? this.title,
+        author: author ?? this.author,
+        totalChapters: clearTotal ? null : (totalChapters ?? this.totalChapters),
+        chapterNames: chapterNames ?? this.chapterNames,
+        chapter: clearChapter ? null : (chapter ?? this.chapter),
+        status: status ?? this.status,
+        rating: clearRating ? null : (rating ?? this.rating),
+        openLibraryKey: openLibraryKey ?? this.openLibraryKey,
+        coverId: coverId ?? this.coverId,
+        coverFile: clearCoverFile ? null : (coverFile ?? this.coverFile),
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
+}
+
 /// data/deleted.json: what was deleted and when, so a sync with the PC
-/// doesn't bring it back. Keys: entity id, fact id, [Relationship.key].
+/// doesn't bring it back. Keys: entity id, fact id, [Relationship.key], book id.
 class DeletedLog {
   final Map<String, String> entities;
   final Map<String, String> facts;
   final Map<String, String> relationships;
+  final Map<String, String> books;
 
-  DeletedLog({Map<String, String>? entities, Map<String, String>? facts, Map<String, String>? relationships})
-      : entities = entities ?? {},
+  DeletedLog({
+    Map<String, String>? entities,
+    Map<String, String>? facts,
+    Map<String, String>? relationships,
+    Map<String, String>? books,
+  })  : entities = entities ?? {},
         facts = facts ?? {},
-        relationships = relationships ?? {};
+        relationships = relationships ?? {},
+        books = books ?? {};
 
   static Map<String, String> _map(Object? v) =>
       v is Map ? {for (final e in v.entries) e.key.toString(): e.value.toString()} : {};
@@ -386,12 +527,14 @@ class DeletedLog {
         entities: _map(j['entities']),
         facts: _map(j['facts']),
         relationships: _map(j['relationships']),
+        books: _map(j['books']),
       );
 
   Map<String, dynamic> toJson() => {
         'entities': entities,
         'facts': facts,
         'relationships': relationships,
+        'books': books,
       };
 }
 
@@ -407,6 +550,9 @@ class AppSettings {
   /// Pairing code printed by `syl.py serve`.
   final String syncCode;
 
+  /// 'system' (follow the phone), 'light' or 'dark'.
+  final String appearance;
+
   const AppSettings({
     this.currentBook,
     this.spoilerChapter,
@@ -414,6 +560,7 @@ class AppSettings {
     this.lmModel = '',
     this.syncUrl = '',
     this.syncCode = '',
+    this.appearance = 'system',
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> j) => AppSettings(
@@ -423,6 +570,7 @@ class AppSettings {
         lmModel: _str(j, ['lm_model']),
         syncUrl: _str(j, ['sync_url']),
         syncCode: _str(j, ['sync_code']),
+        appearance: _str(j, ['appearance'], 'system'),
       );
 
   Map<String, dynamic> toJson() => {
@@ -432,6 +580,7 @@ class AppSettings {
         'lm_model': lmModel,
         'sync_url': syncUrl,
         'sync_code': syncCode,
+        'appearance': appearance,
       };
 
   AppSettings copyWith({
@@ -443,6 +592,7 @@ class AppSettings {
     String? lmModel,
     String? syncUrl,
     String? syncCode,
+    String? appearance,
   }) =>
       AppSettings(
         currentBook: clearBook ? null : (currentBook ?? this.currentBook),
@@ -451,5 +601,6 @@ class AppSettings {
         lmModel: lmModel ?? this.lmModel,
         syncUrl: syncUrl ?? this.syncUrl,
         syncCode: syncCode ?? this.syncCode,
+        appearance: appearance ?? this.appearance,
       );
 }

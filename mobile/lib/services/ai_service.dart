@@ -98,13 +98,15 @@ class AiService {
     return b.toString();
   }
 
-  /// Returns fresh lore for [e] using only facts up to [spoilerChapter].
+  /// Returns fresh lore for [e] using only facts up to [chapter], how far
+  /// you've read [e]'s book.
   Future<Lore> generateLore({
     required Entity e,
     required List<String> connections,
     required AppSettings settings,
+    required int? chapter,
   }) async {
-    final cap = settings.spoilerChapter;
+    final cap = chapter;
     final facts = e.visibleFacts(cap);
     if (facts.isEmpty) throw AiException('Add a fact first. The AI only writes from your notes.');
     final model = await pickModel(settings.lmStudioUrl, settings.lmModel);

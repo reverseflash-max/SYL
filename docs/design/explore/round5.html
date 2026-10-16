@@ -1,0 +1,188 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&display=block" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #DADADA; display: flex; gap: 40px; padding: 40px; align-items: flex-start; font-family: "Bricolage Grotesque", sans-serif; }
+  .col { display:flex; flex-direction: column; }
+  .cap { font: 600 15px "Bricolage Grotesque"; color: #222; margin-bottom: 10px; }
+  .screen { width: 412px; height: 915px; position: relative; overflow: hidden; flex: none; background: var(--ground); color: var(--ink); }
+  .status { height: 34px; display:flex; justify-content:space-between; align-items:center; padding: 0 22px; font-size: 13px; font-weight: 600; }
+  .top { display:flex; justify-content:space-between; align-items:center; padding: 4px 18px 0 20px; }
+  .mark { font-weight: 800; font-size: 22px; letter-spacing: -0.5px; }
+  .round { width: 48px; height: 48px; border-radius: 50%; display:grid; place-items:center; background: var(--btn); }
+  .grid { display:flex; gap: 10px; padding: 0 18px; }
+  .grid > div { flex: 1; display:flex; flex-direction: column; gap: 10px; }
+  .b { border-radius: 26px; padding: 16px; position: relative; overflow: hidden; }
+  .tag { display:inline-flex; align-items:center; gap: 6px; font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 12px; }
+  .new { position:absolute; right: 12px; top: 14px; font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 10px; }
+  .meta { display:flex; justify-content: space-between; font-size: 12px; font-weight: 500; margin-top: 12px; }
+  .navwrap { position:absolute; left: 0; right: 0; bottom: 20px; display:flex; justify-content:center; z-index: 5; }
+  .nav { height: 64px; padding: 0 8px; border-radius: 32px; background: var(--navbg); display:flex; align-items:center; gap: 4px; box-shadow: 0 16px 40px rgba(0,0,0,.3); }
+  .nav .it { height: 48px; min-width: 48px; display:grid; place-items:center; }
+  .nav .sel { height: 48px; background: var(--navsel); color: var(--navseltext); border-radius: 24px; padding: 0 16px; display:flex; align-items:center; gap: 8px; font-weight: 700; font-size: 14px; }
+  .nav .add { width: 48px; height: 48px; border-radius: 50%; background: #F5DC7A; display:grid; place-items:center; }
+
+  /* ---------- M. Bento, by meaning ---------- */
+  .m { --ground:#F3EFE7; --ink:#171614; --muted:#5F5A52; --btn:#fff; --navbg:#171614; --navsel:#F3EFE7; --navseltext:#171614;
+       --char:#F5DC7A; --place:#BCE2C6; --item:#D5C8F4; --lore:#F7C4A0; }
+  .m h1 { font-weight: 800; font-size: 46px; letter-spacing: -1.5px; line-height: .95; padding: 14px 20px 0; }
+  .m .hero { margin: 16px 18px 12px; background: #171614; color: #F3EFE7; border-radius: 28px; padding: 14px; display:flex; gap: 14px; align-items: center; }
+  .m .cover { width: 62px; height: 92px; flex:none; border-radius: 4px 10px 10px 4px; background: #2C3B2F; border-left: 4px solid #1C261E; display:grid; place-items:center; text-align:center; font: 400 10px/1.15 "Libre Caslon Text"; color:#E9E2CC; padding: 6px; }
+  .m .hero small { font-size: 12px; color: #B9B3A8; }
+  .m .hero b { display:block; font-size: 18px; font-weight: 700; margin-top: 2px; }
+  .m .hero .ch { display:inline-flex; margin-top: 10px; background: #F5DC7A; color: #171614; font-weight: 700; font-size: 13px; padding: 6px 12px; border-radius: 16px; }
+  .m .hero .ch span { font-weight: 500; margin-left: 6px; }
+  .m .b h3 { font-weight: 800; font-size: 24px; letter-spacing: -0.7px; line-height: 1; margin-top: 10px; }
+  .m .b p { font-size: 14px; line-height: 1.35; margin-top: 8px; }
+  .m .tag { background: rgba(23,22,20,.08); }
+  .m .new { background: #171614; color: #F3EFE7; }
+  .m .sealed { border: 2px dashed #CFC8BA; background: transparent; color: #5F5A52; }
+  .m .sealed h3 { font-size: 18px; color: #171614; }
+
+  /* ---------- N. Jewel box ---------- */
+  .n { --ground:#111218; --ink:#F2EEE6; --muted:#B8B2C4; --btn:#1F2130; --navbg:#1F2130; --navsel:#F2EEE6; --navseltext:#111218; }
+  .n .title { padding: 14px 20px 0; }
+  .n .title small { font-size: 14px; color: #A9A4B5; }
+  .n .title h1 { font: 400 32px/1.05 "Libre Caslon Text"; margin-top: 6px; }
+  .n .hero { margin: 16px 18px 12px; border-radius: 28px; padding: 14px; display:flex; gap: 14px; align-items:center; background: linear-gradient(135deg, #2A2C40, #1E2030); }
+  .n .cover { width: 62px; height: 92px; flex:none; border-radius: 4px 10px 10px 4px; background: #2C3B2F; border-left: 4px solid #1C261E; display:grid; place-items:center; text-align:center; font: 400 10px/1.15 "Libre Caslon Text"; color:#E9E2CC; padding: 6px; box-shadow: 0 8px 18px rgba(0,0,0,.4); }
+  .n .hero .big { font: 400 34px/1 "Libre Caslon Text"; }
+  .n .hero .big span { font-size: 16px; color: #A9A4B5; margin-right: 4px; }
+  .n .hero p { font-size: 13px; color: #B8B2C4; margin-top: 6px; line-height: 1.35; }
+  .n .b { color: #F2EEE6; box-shadow: inset 0 1px 0 rgba(255,255,255,.08); }
+  .n .b h3 { font: 700 22px/1.05 "Libre Caslon Text"; margin-top: 10px; }
+  .n .b p { font-size: 14px; line-height: 1.35; margin-top: 8px; color: rgba(242,238,230,.82); }
+  .n .meta { color: rgba(242,238,230,.75); }
+  .n .tag { background: rgba(255,255,255,.12); color: #F2EEE6; }
+  .n .new { background: #F5DC7A; color: #2A2205; }
+  .n .sapphire { background: radial-gradient(120% 90% at 0% 0%, #34508F, #1F2F5C); }
+  .n .emerald { background: radial-gradient(120% 90% at 0% 0%, #2B6B4F, #17402E); }
+  .n .amethyst { background: radial-gradient(120% 90% at 0% 0%, #6A4596, #3C2660); }
+  .n .garnet { background: radial-gradient(120% 90% at 0% 0%, #8A3442, #521C27); }
+  .n .sealed { background: rgba(255,255,255,.04); border: 1.5px dashed #3A3D52; }
+  .n .sealed h3 { font-size: 18px; }
+
+  /* ---------- O. Storybook glyphs ---------- */
+  .o { --ground:#F5F0E6; --ink:#1C1A17; --muted:#5F5A52; --btn:#fff; --navbg:#1C1A17; --navsel:#F5F0E6; --navseltext:#1C1A17; }
+  .o .greet { padding: 14px 20px 0; }
+  .o .greet small { font-size: 15px; color: #5F5A52; }
+  .o .greet h1 { font-weight: 800; font-size: 34px; letter-spacing: -1px; line-height: 1.02; margin-top: 4px; }
+  .o .greet h1 em { font: italic 400 34px "Libre Caslon Text"; letter-spacing: -0.5px; }
+  .o .strip { display:flex; gap: 10px; padding: 16px 18px 12px; }
+  .o .strip .b { flex: 1; }
+  .o .bk { background: #1C1A17; color: #F5F0E6; display:flex; gap: 12px; align-items:center; }
+  .o .cover { width: 50px; height: 74px; flex:none; border-radius: 3px 8px 8px 3px; background: #2C3B2F; border-left: 4px solid #1C261E; display:grid; place-items:center; text-align:center; font: 400 9px/1.15 "Libre Caslon Text"; color:#E9E2CC; padding: 4px; }
+  .o .bk small { font-size: 12px; color: #B9B3A8; }
+  .o .bk b { display:block; font-size: 22px; font-weight: 800; }
+  .o .newb { background: #F5DC7A; flex: 0 0 120px !important; }
+  .o .newb b { font-size: 34px; font-weight: 800; line-height: 1; display:block; }
+  .o .newb small { font-size: 13px; font-weight: 600; }
+  .o .b h3 { font-weight: 800; font-size: 23px; letter-spacing: -0.6px; line-height: 1; margin-top: 10px; position: relative; }
+  .o .b p { font-size: 14px; line-height: 1.35; margin-top: 8px; position: relative; padding-right: 8px; }
+  .o .meta { position: relative; }
+  .o .tag { background: rgba(28,26,23,.08); position: relative; }
+  .o .glyph { position:absolute; right: -10px; bottom: -10px; opacity: .13; }
+  .o .char { background: #F5DC7A; } .o .place { background: #BCE2C6; } .o .item { background: #D5C8F4; } .o .lore { background: #F7C4A0; }
+  .o .new { background: #1C1A17; color: #F5F0E6; z-index: 2; }
+  .o .sealed { background: transparent; border: 2px dashed #CFC8BA; color: #5F5A52; }
+  .o .sealed h3 { font-size: 18px; color: #1C1A17; }
+</style></head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <!-- hooded figure -->
+    <symbol id="g-char" viewBox="0 0 100 100"><path d="M50 8c-14 0-24 12-24 28 0 6 2 12 5 16-12 8-19 22-21 40h80c-2-18-9-32-21-40 3-4 5-10 5-16 0-16-10-28-24-28z" fill="none" stroke="#1C1A17" stroke-width="5" stroke-linejoin="round"/><path d="M38 40c3 6 7 9 12 9s9-3 12-9" fill="none" stroke="#1C1A17" stroke-width="5" stroke-linecap="round"/></symbol>
+    <!-- tower -->
+    <symbol id="g-place" viewBox="0 0 100 100"><path d="M28 92V38h44v54M24 38V20h10v8h9v-8h14v8h9v-8h10v18z" fill="none" stroke="#1C1A17" stroke-width="5" stroke-linejoin="round"/><path d="M42 92V72a8 8 0 0 1 16 0v20M46 50h8v10h-8z" fill="none" stroke="#1C1A17" stroke-width="5" stroke-linejoin="round"/></symbol>
+    <!-- sword -->
+    <symbol id="g-item" viewBox="0 0 100 100"><path d="M78 10L84 16 44 64 36 56z" fill="none" stroke="#1C1A17" stroke-width="5" stroke-linejoin="round"/><path d="M26 54l20 20M36 64L20 80M14 86l6-6" fill="none" stroke="#1C1A17" stroke-width="5" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
+<!-- ======================= M. BENTO BY MEANING ======================= -->
+<div class="col"><div class="cap">M. Bento, colour by type</div>
+<section class="screen m">
+  <div class="status"><span>21:47</span><span>●●● ▮</span></div>
+  <div class="top"><span class="mark">syl.</span><span class="round"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#171614" stroke-width="2.2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 20 20"/></svg></span></div>
+  <h1>Library</h1>
+  <div class="hero"><div class="cover">The Lord of the Rings</div>
+    <div><small>Reading now</small><b>The Lord of the Rings</b><span class="ch">Ch. 12<span>Flight to the Ford</span></span></div></div>
+  <div class="grid">
+    <div>
+      <div class="b" style="background:var(--char)"><span class="new">New</span><span class="tag">Character</span><h3>Aragorn</h3><p>Heir of Isildur, though he keeps it quiet.</p><div class="meta"><span>4 facts</span><span>Ch. 10–12</span></div></div>
+      <div class="b" style="background:var(--place)"><span class="tag">Place</span><h3>Bree</h3><p>Men and hobbits live side by side here.</p><div class="meta"><span>1 fact</span><span>Ch. 9</span></div></div>
+      <div class="b sealed"><h3>1 fact waits</h3><p>Past your bookmark. It appears at ch. 13.</p></div>
+    </div>
+    <div>
+      <div class="b" style="background:var(--char)"><span class="new">New</span><span class="tag">Character</span><h3>Frodo Baggins</h3><p>Stabbed by a Morgul blade on Weathertop.</p><div class="meta"><span>3 facts</span><span>Ch. 1–12</span></div></div>
+      <div class="b" style="background:var(--char)"><span class="tag">Character</span><h3>Gandalf</h3><p>Leaves a late letter for Frodo with Butterbur.</p><div class="meta"><span>2 facts</span><span>Ch. 1–10</span></div></div>
+      <div class="b" style="background:var(--item)"><span class="tag">Item</span><h3>Narsil</h3><p>Nothing noted yet.</p></div>
+    </div>
+  </div>
+  <div class="navwrap"><div class="nav">
+    <span class="sel"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg>Library</span>
+    <span class="it"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F3EFE7" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M7 7l3 3M17 7l-3 3M7 17l3-3M17 17l-3-3"/></svg></span>
+    <span class="it"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F3EFE7" stroke-width="2"><path d="M2 5c3-1 6-1 10 1v14c-4-2-7-2-10-1zM22 5c-3-1-6-1-10 1v14c4-2 7-2 10-1z"/></svg></span>
+    <span class="add"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#171614" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+  </div></div>
+</section></div>
+
+<!-- ======================= N. JEWEL BOX ======================= -->
+<div class="col"><div class="cap">N. Jewel box</div>
+<section class="screen n">
+  <div class="status"><span>21:47</span><span>●●● ▮</span></div>
+  <div class="top"><span class="mark">syl.</span><span class="round"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F2EEE6" stroke-width="2.2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 20 20"/></svg></span></div>
+  <div class="title"><small>Reading now</small><h1>The Lord of the Rings</h1></div>
+  <div class="hero"><div class="cover">The Lord of the Rings</div>
+    <div><div class="big"><span>ch.</span>12</div><p>Flight to the Ford. Nothing past here is shown or sent to the AI.</p></div></div>
+  <div class="grid">
+    <div>
+      <div class="b sapphire"><span class="new">New</span><span class="tag">Character</span><h3>Aragorn</h3><p>Heir of Isildur, though he keeps it quiet.</p><div class="meta"><span>4 facts</span><span>Ch. 10–12</span></div></div>
+      <div class="b emerald"><span class="tag">Place</span><h3>Bree</h3><p>Men and hobbits live side by side here.</p><div class="meta"><span>1 fact</span><span>Ch. 9</span></div></div>
+      <div class="b sealed"><h3 style="font-family:'Libre Caslon Text'">1 fact waits</h3><p style="color:#B8B2C4">Past your bookmark. It appears at ch. 13.</p></div>
+    </div>
+    <div>
+      <div class="b sapphire"><span class="new">New</span><span class="tag">Character</span><h3>Frodo Baggins</h3><p>Stabbed by a Morgul blade on Weathertop.</p><div class="meta"><span>3 facts</span><span>Ch. 1–12</span></div></div>
+      <div class="b sapphire"><span class="tag">Character</span><h3>Gandalf</h3><p>Leaves a late letter for Frodo with Butterbur.</p><div class="meta"><span>2 facts</span><span>Ch. 1–10</span></div></div>
+      <div class="b amethyst"><span class="tag">Item</span><h3>Narsil</h3><p>Nothing noted yet.</p></div>
+    </div>
+  </div>
+  <div class="navwrap"><div class="nav">
+    <span class="sel"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg>Library</span>
+    <span class="it"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F2EEE6" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M7 7l3 3M17 7l-3 3M7 17l3-3M17 17l-3-3"/></svg></span>
+    <span class="it"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F2EEE6" stroke-width="2"><path d="M2 5c3-1 6-1 10 1v14c-4-2-7-2-10-1zM22 5c-3-1-6-1-10 1v14c4-2 7-2 10-1z"/></svg></span>
+    <span class="add"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#171614" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+  </div></div>
+</section></div>
+
+<!-- ======================= O. STORYBOOK GLYPHS ======================= -->
+<div class="col"><div class="cap">O. Storybook glyphs</div>
+<section class="screen o">
+  <div class="status"><span>21:47</span><span>●●● ▮</span></div>
+  <div class="top"><span class="mark">syl.</span><span class="round"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1C1A17" stroke-width="2.2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 20 20"/></svg></span></div>
+  <div class="greet"><small>Good evening, reader</small><h1>Who's who in<br><em>The Lord of the Rings</em></h1></div>
+  <div class="strip">
+    <div class="b bk"><div class="cover">The Lord of the Rings</div><div><small>Your bookmark</small><b>Ch. 12</b><small>Flight to the Ford</small></div></div>
+    <div class="b newb"><b>2</b><small>new this chapter</small></div>
+  </div>
+  <div class="grid">
+    <div>
+      <div class="b char"><svg class="glyph" width="96" height="96"><use href="#g-char"/></svg><span class="new">New</span><span class="tag">Character</span><h3>Aragorn</h3><p>Heir of Isildur, though he keeps it quiet.</p><div class="meta"><span>4 facts</span><span>Ch. 10–12</span></div></div>
+      <div class="b place"><svg class="glyph" width="96" height="96"><use href="#g-place"/></svg><span class="tag">Place</span><h3>Bree</h3><p>Men and hobbits live side by side here.</p><div class="meta"><span>1 fact</span><span>Ch. 9</span></div></div>
+    </div>
+    <div>
+      <div class="b char"><svg class="glyph" width="96" height="96"><use href="#g-char"/></svg><span class="new">New</span><span class="tag">Character</span><h3>Frodo Baggins</h3><p>Stabbed by a Morgul blade on Weathertop.</p><div class="meta"><span>3 facts</span><span>Ch. 1–12</span></div></div>
+      <div class="b item"><svg class="glyph" width="96" height="96"><use href="#g-item"/></svg><span class="tag">Item</span><h3>Narsil</h3><p>Nothing noted yet.</p></div>
+    </div>
+  </div>
+  <div class="navwrap"><div class="nav">
+    <span class="sel"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg>Library</span>
+    <span class="it"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F5F0E6" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M7 7l3 3M17 7l-3 3M7 17l3-3M17 17l-3-3"/></svg></span>
+    <span class="it"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F5F0E6" stroke-width="2"><path d="M2 5c3-1 6-1 10 1v14c-4-2-7-2-10-1zM22 5c-3-1-6-1-10 1v14c4-2 7-2 10-1z"/></svg></span>
+    <span class="add"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#171614" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+  </div></div>
+</section></div>
+
+</body></html>

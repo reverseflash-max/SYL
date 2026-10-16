@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 
 import '../data/storage.dart';
 import '../models/models.dart';
 import '../services/ai_service.dart';
+import '../services/open_library_service.dart';
 import '../services/sync_service.dart';
 import '../services/wikidata_service.dart';
 
@@ -10,24 +13,30 @@ import '../services/wikidata_service.dart';
 /// `context.watch<LibraryStore>()` and call its methods to change things;
 /// every change is written straight to disk.
 class LibraryStore extends ChangeNotifier {
-  LibraryStore({WikidataService? wikidata, AiService? ai, SyncService? sync})
+  LibraryStore({WikidataService? wikidata, AiService? ai, SyncService? sync, OpenLibraryService? openLibrary})
       : wikidata = wikidata ?? WikidataService(),
         ai = ai ?? AiService(),
-        sync = sync ?? SyncService();
+        sync = sync ?? SyncService(),
+        openLibrary = openLibrary ?? OpenLibraryService();
 
   /// In-memory store for tests and previews: nothing is written to disk.
   LibraryStore.memory({
     List<Entity> entities = const [],
     List<Relationship> relationships = const [],
     AppSettings settings = const AppSettings(),
+    List<Book>? books,
     SyncService? sync,
-  })  : wikidata = WikidataService(),
+    WikidataService? wikidata,
+    OpenLibraryService? openLibrary,
+  })  : wikidata = wikidata ?? WikidataService(),
         ai = AiService(),
         sync = sync ?? SyncService(),
+        openLibrary = openLibrary ?? OpenLibraryService(),
         _memoryOnly = true {
     _entities = [...entities];
     _relationships = [...relationships];
     _settings = settings;
+    _books = books != null ? [...books] : _booksFromOldLibrary();
     _loading = false;
   }
 
@@ -35,11 +44,13 @@ class LibraryStore extends ChangeNotifier {
   final WikidataService wikidata;
   final AiService ai;
   final SyncService sync;
+  final OpenLibraryService openLibrary;
   SylStorage? _storage;
 
   List<Entity> _entities = [];
   List<Relationship> _relationships = [];
   AppSettings _settings = const AppSettings();
+  List<Book> _books = [];
   DeletedLog _deleted = DeletedLog();
   bool _loading = true;
   String? _error;
@@ -52,7 +63,58 @@ class LibraryStore extends ChangeNotifier {
   String? get error => _error;
   String get dataPath => _storage?.root.path ?? '';
   bool isBusy(String id) => _busy.contains(id);
-  int? get spoilerChapter => _settings.spoilerChapter;
+
+  /// All your books, in the order you added them.
+  List<Book> get bookList => List.unmodifiable(_books);
+
+  /// The book the Library and Map show, if any.
+  Book? get currentBook => bookByTitle(_settings.currentBook);
+
+  /// The chapter of the book the Library shows (its spoiler shield).
+  int? get spoilerChapter => currentBook?.chapter;
+
+  Book? bookByTitle(String? title) {
+    if (title == null) return null;
+    final t = title.trim().toLowerCase();
+    for (final b in _books) {
+      if (b.title.toLowerCase() == t) return b;
+    }
+    return null;
+  }
+
+  /// The spoiler shield for a book: how far you've read it. Entries with no
+  /// book, or a book you haven't set a chapter for, are not limited.
+  int? chapterFor(String? bookTitle) => bookByTitle(bookTitle)?.chapter;
+
+  /// The spoiler shield that applies to [e]: its own book's chapter.
+  int? capFor(Entity e) => chapterFor(e.book);
+
+  /// Before books existed there was one chapter for everything: every book
+  /// starts with that chapter, so nothing hidden before becomes visible.
+  List<Book> _booksFromOldLibrary() {
+    final titles = <String>{
+      if (_settings.currentBook != null) _settings.currentBook!,
+      for (final e in _entities)
+        if (e.book != null && e.book!.trim().isNotEmpty) e.book!.trim(),
+    };
+    final now = nowIso();
+    final out = <Book>[];
+    for (final t in titles) {
+      if (out.any((b) => b.title.toLowerCase() == t.toLowerCase())) continue;
+      out.add(Book(id: _uniqueBookId(t, out), title: t, chapter: _settings.spoilerChapter, updatedAt: now));
+    }
+    return out;
+  }
+
+  String _uniqueBookId(String title, List<Book> taken) {
+    final base = slugify(title);
+    var id = base;
+    var n = 2;
+    while (taken.any((b) => b.id == id)) {
+      id = '$base-${n++}';
+    }
+    return id;
+  }
 
   Future<void> load() async {
     if (_memoryOnly) return;
@@ -65,6 +127,14 @@ class LibraryStore extends ChangeNotifier {
       _relationships = await _storage!.loadRelationships();
       _settings = await _storage!.loadSettings();
       _deleted = await _storage!.loadDeleted();
+      final books = await _storage!.loadBooks();
+      if (books == null) {
+        _books = _booksFromOldLibrary();
+        await _storage!.saveBooks(_books);
+      } else {
+        _books = books;
+      }
+      await tidyBooks();
     } catch (e) {
       _error = 'Could not open the SYL library: $e';
     } finally {
@@ -90,24 +160,88 @@ class LibraryStore extends ChangeNotifier {
     return null;
   }
 
+  /// Every book title in use: your books plus any an entry names (one
+  /// spelling each: "mistborn" and "Mistborn" are the same book).
   List<String> get books {
-    final s = <String>{
-      for (final e in _entities)
-        if (e.book != null) e.book!,
-      if (_settings.currentBook != null) _settings.currentBook!,
-    };
-    return s.toList()..sort();
+    final out = <String>[];
+    for (final t in [for (final b in _books) b.title, for (final e in _entities) ?e.book]) {
+      if (t.trim().isNotEmpty && !out.any((o) => sameTitle(o, t))) out.add(t.trim());
+    }
+    return out..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
   }
 
-  int get visibleFactCount => _entities.fold(0, (n, e) => n + e.visibleFacts(spoilerChapter).length);
+  /// Keeps books and entries in step: books whose titles differ only in
+  /// capitals become one (keeping whichever knows more), every entry's book is
+  /// spelled like its book, and a book an entry names but your list lacks is
+  /// added (with no chapter set yet).
+  Future<void> tidyBooks() async {
+    var changed = false;
+    final keep = <String, Book>{};
+    for (final b in _books) {
+      final k = b.title.trim().toLowerCase();
+      final other = keep[k];
+      if (other == null) {
+        keep[k] = b;
+        continue;
+      }
+      var winner = _richer(other, b);
+      final loser = identical(winner, other) ? b : other;
+      // Keep the nicer spelling ("Mistborn" over "mistborn") whichever copy wins.
+      if (winner.title == winner.title.toLowerCase() && loser.title != loser.title.toLowerCase()) {
+        winner = winner.copyWith(title: loser.title.trim(), updatedAt: nowIso());
+      }
+      keep[k] = winner;
+      _deleted.books[loser.id] = nowIso();
+      changed = true;
+    }
+    _books = keep.values.toList();
 
-  List<Relationship> linksFor(String id) => _relationships
-      .where((r) => r.involves(id) && (spoilerChapter == null || r.chapter == null || r.chapter! <= spoilerChapter!))
-      .toList();
+    for (final e in _entities.toList()) {
+      final title = e.book?.trim();
+      if (title == null || title.isEmpty) continue;
+      final book = bookByTitle(title);
+      if (book == null) {
+        _books.add(Book(id: _uniqueBookId(title, _books), title: title, updatedAt: nowIso()));
+        changed = true;
+      } else if (book.title != e.book) {
+        await _put(e.copyWith(book: book.title));
+      }
+    }
+    final current = bookByTitle(_settings.currentBook);
+    if (current != null && current.title != _settings.currentBook) {
+      _settings = _settings.copyWith(currentBook: current.title);
+      await _storage?.saveSettings(_settings);
+    }
+    if (changed) {
+      await _storage?.saveDeleted(_deleted);
+      await _saveBooks();
+    }
+  }
+
+  /// Of two copies of one book, the one that knows more about it.
+  static Book _richer(Book a, Book b) {
+    int score(Book x) =>
+        (x.chapter != null ? 4 : 0) + (x.coverId != null ? 2 : 0) + (x.totalChapters != null ? 2 : 0) +
+        (x.author.isNotEmpty ? 1 : 0) + (x.title != x.title.toLowerCase() ? 1 : 0);
+    final sa = score(a), sb = score(b);
+    if (sa != sb) return sa > sb ? a : b;
+    return a.updatedAt.compareTo(b.updatedAt) >= 0 ? a : b;
+  }
+
+  int get visibleFactCount => _entities.fold(0, (n, e) => n + e.visibleFacts(capFor(e)).length);
+
+  /// Whether a link is past the chapter you've reached in its book.
+  bool linkVisible(Relationship r) {
+    if (r.chapter == null) return true;
+    final cap = chapterFor(byId(r.source)?.book ?? byId(r.target)?.book);
+    return cap == null || r.chapter! <= cap;
+  }
+
+  List<Relationship> linksFor(String id) => _relationships.where((r) => r.involves(id) && linkVisible(r)).toList();
 
   /// Other entities whose name or alias shows up in [e]'s visible facts.
   List<Entity> mentionsIn(Entity e) {
-    final text = e.visibleFacts(spoilerChapter).map((f) => f.text).join(' ');
+    final text = e.visibleFacts(capFor(e)).map((f) => f.text).join(' ');
     if (text.isEmpty) return [];
     return _entities.where((o) {
       if (o.id == e.id) return false;
@@ -126,7 +260,7 @@ class LibraryStore extends ChangeNotifier {
       if (e.name.toLowerCase().contains(query)) return true;
       if (e.external.aliases.any((a) => a.toLowerCase().contains(query))) return true;
       if (e.lore.tags.any((t) => t.toLowerCase().contains(query))) return true;
-      return e.visibleFacts(spoilerChapter).any((f) => f.text.toLowerCase().contains(query));
+      return e.visibleFacts(capFor(e)).any((f) => f.text.toLowerCase().contains(query));
     }).toList();
   }
 
@@ -246,6 +380,129 @@ class LibraryStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ---- books -------------------------------------------------------------------
+
+  Future<void> _saveBooks() async {
+    await _storage?.saveBooks(_books);
+    notifyListeners();
+  }
+
+  /// Adds a book (or returns the one with that title). The first book you add
+  /// becomes the one the Library shows.
+  Future<Book> addBook({
+    required String title,
+    String author = '',
+    int? totalChapters,
+    List<String> chapterNames = const [],
+    int? chapter,
+    String status = 'reading',
+    String? openLibraryKey,
+    int? coverId,
+  }) async {
+    final t = title.trim();
+    final existing = bookByTitle(t);
+    if (existing != null) return existing;
+    if (t.isEmpty) throw ArgumentError('A book needs a title');
+    final b = Book(
+      id: _uniqueBookId(t, _books),
+      title: t,
+      author: author.trim(),
+      totalChapters: totalChapters,
+      chapterNames: chapterNames,
+      chapter: chapter,
+      status: status,
+      openLibraryKey: openLibraryKey,
+      coverId: coverId,
+      updatedAt: nowIso(),
+    );
+    _books.add(b);
+    if (currentBook == null && status == 'reading') {
+      _settings = _settings.copyWith(currentBook: t);
+      await _storage?.saveSettings(_settings);
+    }
+    await _saveBooks();
+    return b;
+  }
+
+  /// Saves changes to a book. A new title is carried over to its entries.
+  Future<void> updateBook(Book b) async {
+    final i = _books.indexWhere((x) => x.id == b.id);
+    if (i < 0) return;
+    final old = _books[i];
+    _books[i] = b.copyWith(updatedAt: nowIso());
+    if (old.title != b.title) {
+      for (final e in _entities.where((e) => sameTitle(e.book, old.title)).toList()) {
+        await _put(e.copyWith(book: b.title));
+      }
+      if (_settings.currentBook == old.title) {
+        _settings = _settings.copyWith(currentBook: b.title);
+        await _storage?.saveSettings(_settings);
+      }
+    }
+    await _saveBooks();
+  }
+
+  /// The photo you chose as [b]'s cover, if it is on this device.
+  File? coverFileFor(Book b) => _storage?.coverFile(b.coverFile);
+
+  /// Uses a photo you picked as [b]'s cover.
+  Future<void> setOwnCover(Book b, List<int> bytes, String extension) async {
+    final storage = _storage;
+    if (storage == null) return;
+    final old = b.coverFile;
+    final name = await storage.saveCover(b.id, bytes, extension);
+    final current = _books.where((x) => x.id == b.id).firstOrNull ?? b;
+    await updateBook(current.copyWith(coverFile: name));
+    await storage.deleteCover(old);
+  }
+
+  /// Goes back to the Open Library cover.
+  Future<void> clearOwnCover(Book b) async {
+    final current = _books.where((x) => x.id == b.id).firstOrNull ?? b;
+    await _storage?.deleteCover(current.coverFile);
+    await updateBook(current.copyWith(clearCoverFile: true));
+  }
+
+  final Set<String> _coverTried = {};
+
+  /// Finds a cover on Open Library for a book that has none yet (once per
+  /// book per session, and quietly: no connection just means no cover).
+  Future<void> findCover(Book b) async {
+    if (b.coverId != null || _memoryOnly || !_coverTried.add(b.id)) return;
+    try {
+      final q = b.author.isEmpty ? b.title : '${b.title} ${b.author}';
+      final hit = (await openLibrary.search(q)).where((h) => h.coverId != null).firstOrNull;
+      final current = _books.where((x) => x.id == b.id).firstOrNull;
+      if (hit == null || current == null) return;
+      await updateBook(current.copyWith(coverId: hit.coverId, openLibraryKey: current.openLibraryKey ?? hit.key));
+    } catch (_) {}
+  }
+
+  /// Moves your place in a book (null turns its spoiler shield off).
+  Future<void> setChapter(String bookTitle, int? chapter) async {
+    final b = bookByTitle(bookTitle) ?? await addBook(title: bookTitle);
+    await updateBook(chapter == null ? b.copyWith(clearChapter: true) : b.copyWith(chapter: chapter));
+  }
+
+  /// The book the Library and Map show.
+  Future<void> setCurrentBook(String? title) =>
+      updateSettings(title == null ? _settings.copyWith(clearBook: true) : _settings.copyWith(currentBook: title));
+
+  /// Removes a book from your list. Its entries stay (they keep the title).
+  Future<void> deleteBook(String id) async {
+    final b = _books.where((x) => x.id == id).firstOrNull;
+    if (b == null) return;
+    _books.removeWhere((x) => x.id == id);
+    _deleted.books[id] = nowIso();
+    await _storage?.saveDeleted(_deleted);
+    if (_settings.currentBook == b.title) {
+      final next = _books.where((x) => x.status == 'reading').firstOrNull;
+      _settings = next == null ? _settings.copyWith(clearBook: true) : _settings.copyWith(currentBook: next.title);
+      await _storage?.saveSettings(_settings);
+    }
+    await _saveBooks();
+  }
+
   // ---- sync with the PC -------------------------------------------------------
 
   bool _syncing = false;
@@ -265,11 +522,14 @@ class LibraryStore extends ChangeNotifier {
         entities: _entities,
         relationships: _relationships,
         deleted: _deleted,
+        books: _books,
       );
-      await _storage?.replaceLibrary(r.entities, r.relationships, r.deleted);
+      await _storage?.replaceLibrary(r.entities, r.relationships, r.deleted, books: r.books);
       _entities = [...r.entities];
       _relationships = [...r.relationships];
       _deleted = r.deleted;
+      if (r.books != null) _books = [...r.books!];
+      await tidyBooks();
       final diff = _entities.length - before;
       final change = diff == 0 ? 'no new entries' : (diff > 0 ? '$diff new' : '${-diff} removed');
       return 'Synced: ${_entities.length} entries ($change), ${_relationships.length} links.';
@@ -288,6 +548,7 @@ class LibraryStore extends ChangeNotifier {
           description: w.description,
           aliases: {...e.external.aliases, ...w.aliases}.toList()..sort(),
           instanceOf: w.instanceOf,
+          safeFacts: w.safeFacts,
         ),
       );
 
@@ -321,7 +582,8 @@ class LibraryStore extends ChangeNotifier {
     notifyListeners();
     try {
       final current = byId(e.id) ?? e;
-      final lore = await ai.generateLore(e: current, connections: _connectionsText(current), settings: _settings);
+      final lore = await ai.generateLore(
+          e: current, connections: _connectionsText(current), settings: _settings, chapter: capFor(current));
       await _put(current.copyWith(lore: lore));
     } finally {
       _busy.remove(e.id);

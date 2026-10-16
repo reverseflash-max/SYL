@@ -102,6 +102,33 @@ class MergeTests(unittest.TestCase):
         self.assertEqual(syl_sync.merge_libraries(a, b), syl_sync.merge_libraries(b, a))
 
 
+def book(bid, title, chapter, updated):
+    return {"id": bid, "title": title, "chapter": chapter, "status": "reading", "updated_at": updated}
+
+
+class BookMergeTests(unittest.TestCase):
+    def test_newer_chapter_wins_and_both_sides_books_are_kept(self):
+        pc = {**lib(), "books": [book("lotr", "The Lord of the Rings", 10, "2026-10-01T10:00:00")]}
+        phone = {**lib(), "books": [book("lotr", "The Lord of the Rings", 12, "2026-10-02T10:00:00"),
+                                    book("mistborn", "Mistborn", 3, "2026-10-02T10:00:00")]}
+        out = syl_sync.merge_libraries(pc, phone)
+        self.assertEqual([(b["id"], b["chapter"]) for b in out["books"]], [("mistborn", 3), ("lotr", 12)])
+
+    def test_a_chosen_cover_survives_the_pc(self):
+        phone = {**lib(), "books": [{**book("lotr", "LOTR", 3, "2026-10-02T10:00:00"), "cover_file": "covers/lotr-1.jpg"}]}
+        (b,) = syl_sync.merge_libraries(lib(), phone)["books"]
+        self.assertEqual(b["cover_file"], "covers/lotr-1.jpg")
+
+    def test_deleted_book_stays_deleted(self):
+        pc = {**lib(), "books": [book("lotr", "The Lord of the Rings", 10, "2026-10-01T10:00:00")]}
+        phone = lib(deleted={"books": {"lotr": "2026-10-02T10:00:00"}})
+        self.assertEqual(syl_sync.merge_libraries(pc, phone)["books"], [])
+
+    def test_an_older_app_without_books_keeps_the_pcs(self):
+        pc = {**lib(), "books": [book("lotr", "The Lord of the Rings", 10, "2026-10-01T10:00:00")]}
+        self.assertEqual(len(syl_sync.merge_libraries(pc, lib())["books"]), 1)
+
+
 class CoreTombstoneTests(unittest.TestCase):
     def setUp(self):
         for f in Path(_TMP.name).rglob("*.json"):
@@ -228,6 +255,17 @@ class LmStudioProxyTests(unittest.TestCase):
         with self.assertRaises(urllib.error.HTTPError) as cm:
             urllib.request.urlopen(self.base + "/v1/embeddings", timeout=5)
         self.assertEqual(cm.exception.code, 404)
+
+
+class RatingTest(unittest.TestCase):
+    def test_half_stars(self):
+        self.assertEqual(core.parse_rating(4.5), 4.5)
+        self.assertEqual(core.parse_rating(4), 4)
+        self.assertIsInstance(core.parse_rating(4.0), int)
+        self.assertEqual(core.parse_rating(0.5), 0.5)
+        self.assertIsNone(core.parse_rating(0))
+        self.assertIsNone(core.parse_rating(5.5))
+        self.assertIsNone(core.parse_rating(True))
 
 
 if __name__ == "__main__":

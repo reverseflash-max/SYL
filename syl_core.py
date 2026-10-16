@@ -70,6 +70,7 @@ ENTITIES_DIR = DATA_DIR / "entities"
 RELATIONSHIPS_FILE = DATA_DIR / "relationships.json"
 SETTINGS_FILE = DATA_DIR / "settings.json"
 DELETED_FILE = DATA_DIR / "deleted.json"
+BOOKS_FILE = DATA_DIR / "books.json"
 
 DEFAULT_SETTINGS: dict[str, Any] = {
     "current_book": None,
@@ -213,6 +214,7 @@ def new_entity(name: str, type_: str = "Other", *, entity_id: str | None = None,
             "description": "",
             "aliases": [],
             "instance_of": [],
+            "safe_facts": [],
         },
         "metadata": {
             "first_seen": today(),
@@ -288,6 +290,7 @@ def normalize_entity(raw: dict, fallback_id: str | None = None) -> dict[str, Any
             "description": str(_get(ext_raw, "description", default="")),
             "aliases": list(_get(ext_raw, "aliases", default=[]) or []),
             "instance_of": list(_get(ext_raw, "instance_of", default=[]) or []),
+            "safe_facts": [str(s) for s in (_get(ext_raw, "safe_facts", default=[]) or [])],
         },
         "metadata": {
             "first_seen": str(_get(meta_raw, "first_seen", "firstSeen", default=today()))[:10],
@@ -324,6 +327,7 @@ def merge_entities(base: dict, other: dict) -> dict:
     ext["description"] = ext["description"] or oext["description"]
     ext["aliases"] = sorted(set(ext["aliases"]) | set(oext["aliases"]))
     ext["instance_of"] = sorted(set(ext["instance_of"]) | set(oext["instance_of"]))
+    ext["safe_facts"] = ext.get("safe_facts") or oext.get("safe_facts", [])
     out["metadata"]["first_seen"] = min(base["metadata"]["first_seen"], other["metadata"]["first_seen"])
     out["metadata"]["last_updated"] = now_iso()
     return out
@@ -469,7 +473,7 @@ def relationship_key(rel: dict) -> str:
 
 # ---- deletions (tombstones) ------------------------------------------------
 
-DELETED_KINDS = ("entities", "facts", "relationships")
+DELETED_KINDS = ("entities", "facts", "relationships", "books")
 
 
 def load_deleted() -> dict[str, dict[str, str]]:
@@ -494,6 +498,57 @@ def record_deletion(kind: str, key: str) -> None:
     deleted = load_deleted()
     deleted[kind][key] = now_iso()
     save_deleted(deleted)
+
+
+# ---- books -------------------------------------------------------------------
+# data/books.json: your books, each with its own chapter (the app's Books tab).
+
+BOOK_STATUSES = ("reading", "want", "finished")
+
+
+def parse_rating(value):
+    """A rating in half stars, 0.5 to 5; whole numbers stay ints (4, not 4.0)."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    halves = round(value * 2)
+    if not 1 <= halves <= 10:
+        return None
+    return halves // 2 if halves % 2 == 0 else halves / 2
+
+
+def normalize_book(raw: Any) -> dict[str, Any] | None:
+    if not isinstance(raw, dict):
+        return None
+    title = str(_get(raw, "title", default="")).strip()
+    if not title:
+        return None
+    total = _get(raw, "total_chapters")
+    rating = _get(raw, "rating")
+    status = _get(raw, "status", default="reading")
+    chapter = _get(raw, "chapter")
+    return {
+        "id": str(_get(raw, "id", default="") or slugify(title)),
+        "title": title,
+        "author": str(_get(raw, "author", default="")),
+        "total_chapters": int(total) if isinstance(total, (int, float)) and total > 0 else None,
+        "chapter_names": [str(c) for c in (_get(raw, "chapter_names", default=[]) or [])],
+        "chapter": parse_chapter(chapter, 1) if chapter is not None else None,
+        "status": status if status in BOOK_STATUSES else "reading",
+        "rating": parse_rating(rating),
+        "open_library_key": _get(raw, "open_library_key"),
+        "cover_id": int(_get(raw, "cover_id")) if isinstance(_get(raw, "cover_id"), (int, float)) else None,
+        "cover_file": _get(raw, "cover_file"),
+        "updated_at": normalize_timestamp(_get(raw, "updated_at")),
+    }
+
+
+def load_books() -> list[dict]:
+    raw = _read_json(BOOKS_FILE, []) or []
+    return [b for b in (normalize_book(r) for r in raw) if b]
+
+
+def save_books(books: list[dict]) -> None:
+    _write_json(BOOKS_FILE, [b for b in (normalize_book(r) for r in books) if b])
 
 
 # ---- settings / spoiler shield -------------------------------------------
