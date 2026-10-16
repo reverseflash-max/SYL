@@ -1,0 +1,238 @@
+import 'dart:io';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+
+import '../models/models.dart';
+import 'books_screen.dart';
+import 'widgets/common.dart';
+
+/// Opens the share preview for a finished, rated book: the card as it will
+/// look in an Instagram Story, and a button that hands the picture to the
+/// phone's share menu (Instagram, WhatsApp, saving it...).
+Future<void> openShareCard(BuildContext context, Book book) =>
+    Navigator.push(context, MaterialPageRoute(builder: (_) => ShareCardScreen(book: book)));
+
+class ShareCardScreen extends StatefulWidget {
+  const ShareCardScreen({super.key, required this.book});
+  final Book book;
+
+  @override
+  State<ShareCardScreen> createState() => _ShareCardScreenState();
+}
+
+class _ShareCardScreenState extends State<ShareCardScreen> {
+  final _card = GlobalKey();
+  bool _sharing = false;
+
+  /// The card at Story size, 1080 x 1920, as PNG bytes.
+  Future<List<int>> _png() async {
+    final boundary = _card.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+    final image = await boundary.toImage(pixelRatio: ShareCard.storySize.width / boundary.size.width);
+    final data = await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+    return data!.buffer.asUint8List();
+  }
+
+  Future<void> _share() async {
+    setState(() => _sharing = true);
+    try {
+      final bytes = await _png();
+      final dir = await getTemporaryDirectory();
+      final slug = widget.book.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-');
+      final file = File('${dir.path}/syl-$slug.png');
+      await file.writeAsBytes(bytes);
+      await SharePlus.instance.share(ShareParams(files: [XFile(file.path, mimeType: 'image/png')]));
+    } catch (e) {
+      if (mounted) showMessage(context, 'Could not make the picture: $e');
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Share')),
+      body: SafeArea(
+        child: Column(children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+              child: Center(
+                child: FittedBox(
+                  child: RepaintBoundary(key: _card, child: ShareCard(book: widget.book)),
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+            child: FilledButton.icon(
+              onPressed: _sharing ? null : _share,
+              icon: const Icon(Icons.ios_share_rounded),
+              label: Text(_sharing ? 'Making the picture...' : 'Share to your Story'),
+              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+/// "Night poster": the book's cover under a night sky, with the title, author,
+/// your stars and when you finished it. Laid out at 360 x 640 and saved at
+/// three times that, the size of an Instagram Story.
+class ShareCard extends StatelessWidget {
+  const ShareCard({super.key, required this.book});
+  final Book book;
+
+  static const size = Size(360, 640);
+  static const storySize = Size(1080, 1920);
+
+  static const _top = Color(0xFF121830);
+  static const _mid = Color(0xFF1B2240);
+  static const _glow = Color(0xFF2A3566);
+  static const _ink = Color(0xFFF2EEE6);
+  static const _muted = Color(0xFFA9B0CC);
+
+  static const _months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  String? get _finished {
+    final d = DateTime.tryParse(book.updatedAt);
+    return d == null ? null : '${_months[d.month - 1]} ${d.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rating = book.rating ?? 0;
+    final finished = _finished;
+    final text = Theme.of(context).textTheme;
+    return MediaQuery(
+      // The card looks the same whatever the phone's text size.
+      data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
+      child: SizedBox.fromSize(
+        size: size,
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+            gradient: RadialGradient(
+              center: Alignment(0, 1),
+              radius: 1.25,
+              colors: [_glow, _mid, _top],
+              stops: [0, 0.45, 1],
+            ),
+          ),
+          child: Stack(children: [
+            const Positioned.fill(child: CustomPaint(painter: _NightSky())),
+            Positioned(
+              left: 30,
+              right: 30,
+              top: 90,
+              height: 280,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(colors: [const Color(0xFF4A6FD9).withValues(alpha: 0.35), const Color(0x004A6FD9)]),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 64,
+              child: Center(child: BookCoverImage(book: book, width: 180)),
+            ),
+            Positioned(
+              left: 28,
+              right: 28,
+              top: 368,
+              child: Column(children: [
+                Text(book.title,
+                    textAlign: TextAlign.center,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.headlineMedium?.copyWith(
+                        color: _ink, fontSize: book.title.length > 28 ? 24 : 29, height: 1.02, letterSpacing: -1)),
+                if (book.author.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(book.author, textAlign: TextAlign.center, style: text.bodyMedium?.copyWith(color: _muted, fontSize: 14)),
+                ],
+                const SizedBox(height: 16),
+                Semantics(
+                  label: '$rating out of 5 stars',
+                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    for (var i = 1; i <= 5; i++)
+                      Icon(i <= rating ? Icons.star_rounded : Icons.star_outline_rounded,
+                          size: 34, color: i <= rating ? _ink : _muted.withValues(alpha: 0.6)),
+                  ]),
+                ),
+                if (finished != null) ...[
+                  const SizedBox(height: 10),
+                  Text('FINISHED · ${finished.toUpperCase()}',
+                      style: text.labelMedium?.copyWith(color: _muted, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1.8)),
+                ],
+              ]),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 26,
+              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                const CustomPaint(size: Size(18, 18), painter: _SylMark(color: Color(0xFFC9CEE2))),
+                const SizedBox(width: 7),
+                Text('SYL', style: text.titleSmall?.copyWith(color: const Color(0xFFC9CEE2), fontWeight: FontWeight.w800, letterSpacing: 0.6)),
+              ]),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+/// A scatter of faint stars, the same every time.
+class _NightSky extends CustomPainter {
+  const _NightSky();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rnd = math.Random(7);
+    final paint = Paint();
+    for (var i = 0; i < 46; i++) {
+      final p = Offset(rnd.nextDouble() * size.width, rnd.nextDouble() * size.height * 0.62);
+      paint.color = Colors.white.withValues(alpha: 0.18 + rnd.nextDouble() * 0.45);
+      canvas.drawCircle(p, 0.5 + rnd.nextDouble() * 0.9, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_NightSky old) => false;
+}
+
+/// SYL's mark: three stars joined into a small constellation.
+class _SylMark extends CustomPainter {
+  const _SylMark({required this.color});
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final s = size.width / 24;
+    final a = Offset(12 * s, 5 * s), b = Offset(5 * s, 17 * s), c = Offset(19 * s, 17 * s);
+    final line = Paint()
+      ..color = color
+      ..strokeWidth = 1.4 * s
+      ..style = PaintingStyle.stroke;
+    canvas.drawPath(Path()..addPolygon([a, b, c], true), line);
+    final dot = Paint()..color = color;
+    for (final p in [a, b, c]) {
+      canvas.drawCircle(p, 2.4 * s, dot);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_SylMark old) => old.color != color;
+}

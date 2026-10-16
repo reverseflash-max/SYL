@@ -6,6 +6,7 @@ import '../models/models.dart';
 import '../services/open_library_service.dart';
 import '../state/library_store.dart';
 import '../theme/syl_theme.dart';
+import 'share_card.dart';
 import 'widgets/common.dart';
 import 'widgets/keyboard.dart';
 
@@ -473,7 +474,8 @@ class _BookSheetState extends State<_BookSheet> {
         ]),
         if (_status == 'finished') ...[
           const SizedBox(height: 12),
-          Row(children: [
+          // Wraps on a small phone rather than spilling off the edge.
+          Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
             Text('Your rating', style: TextStyle(color: Syl.muted)),
             const SizedBox(width: 6),
             for (var i = 1; i <= 5; i++)
@@ -483,6 +485,20 @@ class _BookSheetState extends State<_BookSheet> {
                 icon: Icon(i <= (_rating ?? 0) ? Icons.star_rounded : Icons.star_outline_rounded, color: Syl.accent),
               ),
           ]),
+          if (_rating != null) ...[
+            const SizedBox(height: 4),
+            OutlinedButton.icon(
+              onPressed: () => openShareCard(
+                  context,
+                  widget.book.copyWith(
+                      title: _title.text.trim().isEmpty ? null : _title.text.trim(),
+                      author: _author.text.trim(),
+                      status: _status,
+                      rating: _rating)),
+              icon: const Icon(Icons.ios_share_rounded, size: 20),
+              label: const Text('Share your rating'),
+            ),
+          ],
         ],
         const SizedBox(height: 16),
         if (!current)

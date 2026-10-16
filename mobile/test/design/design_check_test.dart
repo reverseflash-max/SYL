@@ -23,6 +23,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile/state/library_store.dart';
 import 'package:mobile/theme/syl_theme.dart';
+import 'package:mobile/ui/books_screen.dart';
 import 'package:mobile/ui/home_shell.dart';
 import 'package:mobile/ui/new_entity_screen.dart';
 import 'package:provider/provider.dart';
@@ -94,6 +95,24 @@ final scenarios = <Scenario>[
     await t.ensureVisible(card);
     await t.pumpAndSettle();
     await t.tap(card);
+    await t.pumpAndSettle();
+  }),
+  Scenario('12-share-card', (t) async {
+    await _tapNav(t, Icons.menu_book_outlined);
+    // (the title shows twice: under the cover and on its placeholder)
+    final book = find.text('The Hobbit');
+    for (var i = 0; i < 10 && book.evaluate().isEmpty; i++) {
+      await t.drag(find.byType(BooksScreen), const Offset(0, -300));
+      await t.pumpAndSettle();
+    }
+    await t.ensureVisible(book.last);
+    await t.pumpAndSettle();
+    await t.tap(book.last);
+    await t.pumpAndSettle();
+    final share = find.text('Share your rating');
+    await t.ensureVisible(share);
+    await t.pumpAndSettle();
+    await t.tap(share);
     await t.pumpAndSettle();
   }),
 ];
@@ -209,7 +228,11 @@ List<String> _lowContrast(WidgetTester tester, ui.Image shot, ByteData pixels, S
           }
         }
         if (counts.isNotEmpty) {
-          final bg = Color(counts.entries.reduce((a, b) => a.value >= b.value ? a : b).key);
+          // Large heavy text set tight can cover most of its own box: then the
+          // commonest colour is the text itself, and the background is the next.
+          final ranked = counts.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+          var bg = Color(ranked.first.key);
+          if (ranked.length > 1 && contrast(Color.alphaBlend(style!.color!, bg), bg) < 1.05) bg = Color(ranked[1].key);
           final fg = Color.alphaBlend(style!.color!, bg);
           final size = style.fontSize ?? 14;
           final bold = (style.fontWeight?.value ?? 400) >= 700;
