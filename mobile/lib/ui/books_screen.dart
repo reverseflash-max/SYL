@@ -346,6 +346,10 @@ class _BookSheetState extends State<_BookSheet> {
   bool _looking = false;
   late List<String> _names = widget.book.chapterNames;
 
+  /// The book as it is now: a cover chosen or found while this sheet is open
+  /// is already saved, and saving the sheet must keep it.
+  Book get _latest => context.read<LibraryStore>().bookList.where((b) => b.id == widget.book.id).firstOrNull ?? widget.book;
+
   @override
   void dispose() {
     _title.dispose();
@@ -392,7 +396,7 @@ class _BookSheetState extends State<_BookSheet> {
     }
     final ch = int.tryParse(_chapter.text.trim());
     final total = int.tryParse(_total.text.trim());
-    await store.updateBook(widget.book.copyWith(
+    await store.updateBook(_latest.copyWith(
       title: title,
       author: _author.text.trim(),
       chapter: ch != null && ch > 0 ? ch : null,
@@ -485,7 +489,7 @@ class _BookSheetState extends State<_BookSheet> {
             OutlinedButton.icon(
               onPressed: () => openShareCard(
                   context,
-                  widget.book.copyWith(
+                  _latest.copyWith(
                       title: _title.text.trim().isEmpty ? null : _title.text.trim(),
                       author: _author.text.trim(),
                       status: _status,
