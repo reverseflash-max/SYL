@@ -2,8 +2,10 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -39,21 +41,47 @@ class _ShareCardScreenState extends State<ShareCardScreen> {
     return data!.buffer.asUint8List();
   }
 
-  Future<void> _share() async {
+  static const _instagram = MethodChannel('syl/instagram');
+
+  /// Instagram's Story share is an Android intent; elsewhere only the share menu shows.
+  bool get _canStory => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  /// Saves the card as a PNG in the app's cache and returns the file.
+  Future<File> _file() async {
+    final bytes = await _png();
+    final dir = await getTemporaryDirectory();
+    final slug = widget.book.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-');
+    final file = File('${dir.path}/syl-$slug.png');
+    await file.writeAsBytes(bytes);
+    return file;
+  }
+
+  Future<void> _run(Future<void> Function() job) async {
     setState(() => _sharing = true);
     try {
-      final bytes = await _png();
-      final dir = await getTemporaryDirectory();
-      final slug = widget.book.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-');
-      final file = File('${dir.path}/syl-$slug.png');
-      await file.writeAsBytes(bytes);
-      await SharePlus.instance.share(ShareParams(files: [XFile(file.path, mimeType: 'image/png')]));
+      await job();
     } catch (e) {
-      if (mounted) showMessage(context, 'Could not make the picture: $e');
+      if (mounted) showMessage(context, 'Could not share the picture: $e');
     } finally {
       if (mounted) setState(() => _sharing = false);
     }
   }
+
+  /// The phone's share menu: Instagram, WhatsApp, saving it...
+  Future<void> _share() => _run(() async {
+        final file = await _file();
+        await SharePlus.instance.share(ShareParams(files: [XFile(file.path, mimeType: 'image/png')]));
+      });
+
+  /// Straight into Instagram's Story editor with the card loaded.
+  Future<void> _shareToStory() => _run(() async {
+        final file = await _file();
+        final opened = await _instagram.invokeMethod<bool>('shareToStory', {'path': file.path});
+        if (opened != true && mounted) {
+          showMessage(context, "Instagram isn't on this phone, so here are the other ways to share.");
+          await SharePlus.instance.share(ShareParams(files: [XFile(file.path, mimeType: 'image/png')]));
+        }
+      });
 
   @override
   Widget build(BuildContext context) {
@@ -73,12 +101,29 @@ class _ShareCardScreenState extends State<ShareCardScreen> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-            child: FilledButton.icon(
-              onPressed: _sharing ? null : _share,
-              icon: const Icon(Icons.ios_share_rounded),
-              label: Text(_sharing ? 'Making the picture...' : 'Share to your Story'),
-              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
-            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              if (_canStory) ...[
+                FilledButton.icon(
+                  onPressed: _sharing ? null : _shareToStory,
+                  icon: const Icon(Icons.add_circle_outline_rounded),
+                  label: Text(_sharing ? 'Making the picture...' : 'Share to Instagram Story'),
+                  style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: _sharing ? null : _share,
+                  icon: const Icon(Icons.ios_share_rounded),
+                  label: const Text('More ways to share'),
+                  style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                ),
+              ] else
+                FilledButton.icon(
+                  onPressed: _sharing ? null : _share,
+                  icon: const Icon(Icons.ios_share_rounded),
+                  label: Text(_sharing ? 'Making the picture...' : 'Share'),
+                  style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+                ),
+            ]),
           ),
         ]),
       ),
