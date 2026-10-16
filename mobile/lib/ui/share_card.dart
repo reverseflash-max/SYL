@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 import '../models/models.dart';
 import 'books_screen.dart';
 import 'widgets/common.dart';
+import 'widgets/stars.dart';
 
 /// Opens the share preview for a finished, rated book: the card as it will
 /// look in an Instagram Story, and a button that hands the picture to the
@@ -162,14 +163,7 @@ class ShareCard extends StatelessWidget {
                   Text(book.author, textAlign: TextAlign.center, style: text.bodyMedium?.copyWith(color: _muted, fontSize: 14)),
                 ],
                 const SizedBox(height: 16),
-                Semantics(
-                  label: '$rating out of 5 stars',
-                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    for (var i = 1; i <= 5; i++)
-                      Icon(i <= rating ? Icons.star_rounded : Icons.star_outline_rounded,
-                          size: 34, color: i <= rating ? _ink : _muted.withValues(alpha: 0.6)),
-                  ]),
-                ),
+                StarRow(rating: rating, size: 34, color: _ink, emptyColor: _muted.withValues(alpha: 0.6)),
                 if (finished != null) ...[
                   const SizedBox(height: 10),
                   Text('FINISHED · ${finished.toUpperCase()}',

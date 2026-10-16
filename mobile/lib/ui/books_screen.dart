@@ -9,6 +9,7 @@ import '../theme/syl_theme.dart';
 import 'share_card.dart';
 import 'widgets/common.dart';
 import 'widgets/keyboard.dart';
+import 'widgets/stars.dart';
 
 /// Your books: what you're reading (each with its own chapter, which is that
 /// book's spoiler shield), what you want to read, and what you've finished.
@@ -201,7 +202,7 @@ class _Shelf extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: showRating ? 214 : 196,
+      height: showRating ? 218 : 196,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: books.length,
@@ -218,7 +219,10 @@ class _Shelf extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(b.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, height: 1.2)),
                 if (showRating && b.rating != null)
-                  Text('${'★' * b.rating!}${'☆' * (5 - b.rating!)}', style: const TextStyle(fontSize: 14, color: Syl.accent)),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: StarRow(rating: b.rating!, size: 16, color: Syl.accent),
+                  ),
               ]),
             ),
           );
@@ -338,7 +342,7 @@ class _BookSheetState extends State<_BookSheet> {
   late final _chapter = TextEditingController(text: widget.book.chapter?.toString() ?? '');
   late final _total = TextEditingController(text: widget.book.totalChapters?.toString() ?? '');
   late String _status = widget.book.status;
-  late int? _rating = widget.book.rating;
+  late double? _rating = widget.book.rating;
   bool _looking = false;
   late List<String> _names = widget.book.chapterNames;
 
@@ -474,17 +478,8 @@ class _BookSheetState extends State<_BookSheet> {
         ]),
         if (_status == 'finished') ...[
           const SizedBox(height: 12),
-          // Wraps on a small phone rather than spilling off the edge.
-          Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
-            Text('Your rating', style: TextStyle(color: Syl.muted)),
-            const SizedBox(width: 6),
-            for (var i = 1; i <= 5; i++)
-              IconButton(
-                tooltip: '$i ${i == 1 ? 'star' : 'stars'}',
-                onPressed: () => setState(() => _rating = _rating == i ? null : i),
-                icon: Icon(i <= (_rating ?? 0) ? Icons.star_rounded : Icons.star_outline_rounded, color: Syl.accent),
-              ),
-          ]),
+          Text('Your rating', style: TextStyle(color: Syl.muted)),
+          StarRatingInput(rating: _rating, color: Syl.accent, onChanged: (v) => setState(() => _rating = v)),
           if (_rating != null) ...[
             const SizedBox(height: 4),
             OutlinedButton.icon(

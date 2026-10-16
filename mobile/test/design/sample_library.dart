@@ -115,7 +115,7 @@ LibraryStore sampleLibrary() {
         ],
       ),
       Book(id: 'mistborn', title: mistborn, author: 'Brandon Sanderson', chapter: 5, totalChapters: 38),
-      Book(id: 'the-hobbit', title: 'The Hobbit', author: 'J. R. R. Tolkien', status: 'finished', rating: 5),
+      Book(id: 'the-hobbit', title: 'The Hobbit', author: 'J. R. R. Tolkien', status: 'finished', rating: 4.5),
       Book(id: 'elantris', title: 'Elantris', author: 'Brandon Sanderson', status: 'want'),
     ],
   );

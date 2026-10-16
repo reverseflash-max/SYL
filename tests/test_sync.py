@@ -257,5 +257,16 @@ class LmStudioProxyTests(unittest.TestCase):
         self.assertEqual(cm.exception.code, 404)
 
 
+class RatingTest(unittest.TestCase):
+    def test_half_stars(self):
+        self.assertEqual(core.parse_rating(4.5), 4.5)
+        self.assertEqual(core.parse_rating(4), 4)
+        self.assertIsInstance(core.parse_rating(4.0), int)
+        self.assertEqual(core.parse_rating(0.5), 0.5)
+        self.assertIsNone(core.parse_rating(0))
+        self.assertIsNone(core.parse_rating(5.5))
+        self.assertIsNone(core.parse_rating(True))
+
+
 if __name__ == "__main__":
     unittest.main()

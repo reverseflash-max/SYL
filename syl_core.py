@@ -506,6 +506,16 @@ def record_deletion(kind: str, key: str) -> None:
 BOOK_STATUSES = ("reading", "want", "finished")
 
 
+def parse_rating(value):
+    """A rating in half stars, 0.5 to 5; whole numbers stay ints (4, not 4.0)."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    halves = round(value * 2)
+    if not 1 <= halves <= 10:
+        return None
+    return halves // 2 if halves % 2 == 0 else halves / 2
+
+
 def normalize_book(raw: Any) -> dict[str, Any] | None:
     if not isinstance(raw, dict):
         return None
@@ -524,7 +534,7 @@ def normalize_book(raw: Any) -> dict[str, Any] | None:
         "chapter_names": [str(c) for c in (_get(raw, "chapter_names", default=[]) or [])],
         "chapter": parse_chapter(chapter, 1) if chapter is not None else None,
         "status": status if status in BOOK_STATUSES else "reading",
-        "rating": int(rating) if isinstance(rating, (int, float)) and 1 <= rating <= 5 else None,
+        "rating": parse_rating(rating),
         "open_library_key": _get(raw, "open_library_key"),
         "cover_id": int(_get(raw, "cover_id")) if isinstance(_get(raw, "cover_id"), (int, float)) else None,
         "cover_file": _get(raw, "cover_file"),

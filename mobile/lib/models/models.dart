@@ -398,8 +398,8 @@ class Book {
   /// 'reading', 'finished' or 'want'.
   final String status;
 
-  /// 1 to 5 stars, once you've rated it.
-  final int? rating;
+  /// 0.5 to 5 stars in half stars, once you've rated it.
+  final double? rating;
   final String? openLibraryKey;
 
   /// Open Library cover id: the image is [coverUrl].
@@ -435,7 +435,7 @@ class Book {
   factory Book.fromJson(Map<String, dynamic> j) {
     final title = _str(j, ['title']).trim();
     final status = _str(j, ['status'], 'reading');
-    final rating = j['rating'] is num ? (j['rating'] as num).toInt() : null;
+    final rating = j['rating'] is num ? ((j['rating'] as num) * 2).round() / 2 : null;
     final total = j['total_chapters'] is num ? (j['total_chapters'] as num).toInt() : null;
     return Book(
       id: _str(j, ['id'], slugify(title)),
@@ -445,7 +445,7 @@ class Book {
       chapterNames: (_pick<List>(j, ['chapter_names']) ?? const []).map((e) => e.toString()).toList(),
       chapter: j['chapter'] == null ? null : parseChapter(j['chapter']),
       status: statuses.contains(status) ? status : 'reading',
-      rating: rating != null && rating >= 1 && rating <= 5 ? rating : null,
+      rating: rating != null && rating >= 0.5 && rating <= 5 ? rating : null,
       openLibraryKey: _pick<String>(j, ['open_library_key']),
       coverId: j['cover_id'] is num ? (j['cover_id'] as num).toInt() : null,
       coverFile: _pick<String>(j, ['cover_file']),
@@ -461,7 +461,8 @@ class Book {
         'chapter_names': chapterNames,
         'chapter': chapter,
         'status': status,
-        'rating': rating,
+        // Whole stars stay whole numbers (4, not 4.0), as older versions wrote them.
+        'rating': rating != null && rating! % 1 == 0 ? rating!.toInt() : rating,
         'open_library_key': openLibraryKey,
         'cover_id': coverId,
         'cover_file': coverFile,
@@ -477,7 +478,7 @@ class Book {
     int? chapter,
     bool clearChapter = false,
     String? status,
-    int? rating,
+    double? rating,
     bool clearRating = false,
     String? openLibraryKey,
     int? coverId,

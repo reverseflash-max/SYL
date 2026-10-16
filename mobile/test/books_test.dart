@@ -149,4 +149,15 @@ void main() {
     await store.syncWithPc();
     expect(store.chapterFor('LOTR'), 14);
   });
+
+  test('ratings keep half stars, and whole stars are saved as whole numbers', () {
+    Book read(Object? r) => Book.fromJson({'id': 'b', 'title': 'B', 'rating': r});
+    expect(read(4.5).rating, 4.5);
+    expect(read(4).rating, 4);
+    expect(read(0.5).rating, 0.5);
+    expect(read(0).rating, null);
+    expect(read(6).rating, null);
+    expect(read(4.5).toJson()['rating'], 4.5);
+    expect(read(4).toJson()['rating'], isA<int>());
+  });
 }
