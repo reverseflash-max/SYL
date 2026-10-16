@@ -105,7 +105,7 @@ class _ShareCardScreenState extends State<ShareCardScreen> {
               if (_canStory) ...[
                 FilledButton.icon(
                   onPressed: _sharing ? null : _shareToStory,
-                  icon: const Icon(Icons.add_circle_outline_rounded),
+                  icon: const InstagramGlyph(size: 20),
                   label: Text(_sharing ? 'Making the picture...' : 'Share to Instagram Story'),
                   style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
                 ),
@@ -274,4 +274,36 @@ class _SylMark extends CustomPainter {
 
   @override
   bool shouldRepaint(_SylMark old) => old.color != color;
+}
+
+/// Instagram's glyph (rounded square, lens, flash dot) in the colour of the
+/// text around it, as Instagram's brand guide allows for "share to" buttons.
+class InstagramGlyph extends StatelessWidget {
+  const InstagramGlyph({super.key, this.size = 20});
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+        child: CustomPaint(size: Size.square(size), painter: _InstagramPainter(IconTheme.of(context).color ?? DefaultTextStyle.of(context).style.color!)),
+      );
+}
+
+class _InstagramPainter extends CustomPainter {
+  const _InstagramPainter(this.color);
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final s = size.width / 24;
+    final line = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2 * s;
+    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(3 * s, 3 * s, 18 * s, 18 * s), Radius.circular(5 * s)), line);
+    canvas.drawCircle(Offset(12 * s, 12 * s), 4.2 * s, line);
+    canvas.drawCircle(Offset(17.2 * s, 6.8 * s), 1.3 * s, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(_InstagramPainter old) => old.color != color;
 }
