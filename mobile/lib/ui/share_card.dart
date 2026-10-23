@@ -150,7 +150,7 @@ class ShareCard extends StatelessWidget {
   static const _months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   String? get _finished {
-    final d = DateTime.tryParse(book.updatedAt);
+    final d = DateTime.tryParse(book.finishedAt ?? book.updatedAt);
     return d == null ? null : '${_months[d.month - 1]} ${d.year}';
   }
 

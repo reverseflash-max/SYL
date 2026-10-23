@@ -17,6 +17,7 @@ Merge rules (nothing the user wrote is lost unless they deleted it):
   - Links whose entities no longer exist are dropped.
   - Books are matched by id; the copy changed most recently wins (so your
     chapter in each book follows whichever device you last moved it on).
+    Their reading logs are combined, so a day read on either device counts.
 
 Every sync request must carry the pairing code in the X-SYL-Code header.
 
@@ -135,8 +136,11 @@ def merge_libraries(local: dict, remote: dict) -> dict:
         b = core.normalize_book(raw)
         if not b:
             continue
-        if b["id"] not in books or b["updated_at"] > books[b["id"]]["updated_at"]:
+        had = books.get(b["id"])
+        if had is None or b["updated_at"] > had["updated_at"]:
             books[b["id"]] = b
+        if had is not None:
+            books[b["id"]]["reading_log"] = core.normalize_reading_log(had["reading_log"] + b["reading_log"])
     kept_books = []
     for b in books.values():
         when = deleted["books"].get(b["id"])

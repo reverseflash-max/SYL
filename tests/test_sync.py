@@ -119,6 +119,30 @@ class BookMergeTests(unittest.TestCase):
         (b,) = syl_sync.merge_libraries(lib(), phone)["books"]
         self.assertEqual(b["cover_file"], "covers/lotr-1.jpg")
 
+    def test_reading_days_from_both_sides_are_kept(self):
+        pc = {**lib(), "books": [{**book("lotr", "LOTR", 10, "2026-10-01T10:00:00"),
+                                  "reading_log": [{"date": "2026-09-30", "chapters": 2},
+                                                  {"date": "2026-10-01", "chapters": 1}]}]}
+        phone = {**lib(), "books": [{**book("lotr", "LOTR", 12, "2026-10-02T10:00:00"), "finished_at": None,
+                                     "reading_log": [{"date": "2026-10-01", "chapters": 3, "marked": True},
+                                                     {"date": "2026-10-02", "chapters": 1}]}]}
+        for a, b in ((pc, phone), (phone, pc)):
+            (out,) = syl_sync.merge_libraries(a, b)["books"]
+            self.assertEqual(out["chapter"], 12)
+            self.assertEqual(out["reading_log"], [{"date": "2026-09-30", "chapters": 2},
+                                                  {"date": "2026-10-01", "chapters": 3, "marked": True},
+                                                  {"date": "2026-10-02", "chapters": 1}])
+
+    def test_reading_log_and_finish_day_survive_the_pc(self):
+        b = core.normalize_book({**book("lotr", "LOTR", 3, "2026-10-02T10:00:00"), "status": "finished",
+                                 "finished_at": "2026-10-02",
+                                 "reading_log": [{"date": "2026-10-02", "chapters": 2}, {"date": "nope"},
+                                                 {"date": "2026-02-30", "chapters": 1}, "x"]})
+        self.assertEqual(b["finished_at"], "2026-10-02")
+        self.assertEqual(b["reading_log"], [{"date": "2026-10-02", "chapters": 2}])
+        self.assertIsNone(core.normalize_book({**book("lotr", "LOTR", 3, "2026-10-02T10:00:00"),
+                                               "finished_at": "soon"})["finished_at"])
+
     def test_deleted_book_stays_deleted(self):
         pc = {**lib(), "books": [book("lotr", "The Lord of the Rings", 10, "2026-10-01T10:00:00")]}
         phone = lib(deleted={"books": {"lotr": "2026-10-02T10:00:00"}})
