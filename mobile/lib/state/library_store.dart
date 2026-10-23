@@ -342,6 +342,21 @@ class LibraryStore extends ChangeNotifier {
     ));
   }
 
+  /// Rewrites a fact in place. It keeps its id, so the edit replaces the old
+  /// words on the PC at the next sync instead of sitting beside them.
+  Future<void> updateFact(Entity e, String factId, String text, int chapter) async {
+    final current = byId(e.id) ?? e;
+    final t = text.trim();
+    if (t.isEmpty) return;
+    final facts = [
+      for (final f in current.facts) f.id == factId ? f.copyWith(text: t, chapter: chapter) : f,
+    ]..sort((a, b) => a.chapter != b.chapter ? a.chapter.compareTo(b.chapter) : a.timestamp.compareTo(b.timestamp));
+    await _put(current.copyWith(
+      facts: facts,
+      discoveryChapter: chapter < current.discoveryChapter ? chapter : current.discoveryChapter,
+    ));
+  }
+
   Future<void> removeFact(Entity e, String factId) async {
     final current = byId(e.id) ?? e;
     _deleted.facts[factId] = nowIso();

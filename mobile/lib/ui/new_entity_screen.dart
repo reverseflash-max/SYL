@@ -19,6 +19,7 @@ class _NewEntityScreenState extends State<NewEntityScreen> {
   final _name = TextEditingController();
   String? _book;
   final _chapter = TextEditingController();
+  final _note = TextEditingController();
   String _type = 'Character';
   WikidataInfo? _wd;
   bool _saving = false;
@@ -35,6 +36,7 @@ class _NewEntityScreenState extends State<NewEntityScreen> {
   void dispose() {
     _name.dispose();
     _chapter.dispose();
+    _note.dispose();
     super.dispose();
   }
 
@@ -64,13 +66,16 @@ class _NewEntityScreenState extends State<NewEntityScreen> {
       return;
     }
     setState(() => _saving = true);
+    final chapter = int.tryParse(_chapter.text.trim()) ?? 1;
     final e = await store.createEntity(
       name: name,
       type: _type,
       book: _book,
-      chapter: int.tryParse(_chapter.text.trim()) ?? 1,
+      chapter: chapter,
       wikidataInfo: _wd,
     );
+    // The note becomes their first fact, from the chapter they first appear in.
+    if (_note.text.trim().isNotEmpty) await store.addFact(e, _note.text, chapter);
     if (!mounted) return;
     Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => EntityScreen(entityId: e.id)));
   }
@@ -136,6 +141,17 @@ class _NewEntityScreenState extends State<NewEntityScreen> {
               controller: _chapter,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(labelText: 'First appears in chapter'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _note,
+              maxLines: 4,
+              minLines: 2,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Note (optional)',
+                hintText: 'What do you know about them so far?',
+              ),
             ),
             const SizedBox(height: 28),
             FilledButton(

@@ -166,6 +166,100 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
 }
 
 // ---------------------------------------------------------------------------
+// Edit (or delete) a fact already saved
+// ---------------------------------------------------------------------------
+
+Future<void> showEditFact(BuildContext context, Entity entity, Fact fact) =>
+    _sheet(context, _EditFactSheet(entity: entity, fact: fact));
+
+class _EditFactSheet extends StatefulWidget {
+  const _EditFactSheet({required this.entity, required this.fact});
+  final Entity entity;
+  final Fact fact;
+  @override
+  State<_EditFactSheet> createState() => _EditFactSheetState();
+}
+
+class _EditFactSheetState extends State<_EditFactSheet> {
+  late final _text = TextEditingController(text: widget.fact.text);
+  late final _chapter = TextEditingController(text: '${widget.fact.chapter}');
+
+  @override
+  void dispose() {
+    _text.dispose();
+    _chapter.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final text = _text.text.trim();
+    final ch = int.tryParse(_chapter.text.trim());
+    if (text.isEmpty || ch == null || ch < 0) {
+      showMessage(context, 'Write the fact and a chapter number.');
+      return;
+    }
+    await context.read<LibraryStore>().updateFact(widget.entity, widget.fact.id, text, ch);
+    if (mounted) Navigator.pop(context);
+  }
+
+  Future<void> _delete() async {
+    final store = context.read<LibraryStore>();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: const Text('Delete this fact?'),
+        content: Text(widget.fact.text),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Keep')),
+          TextButton(onPressed: () => Navigator.pop(d, true), child: Text('Delete', style: TextStyle(color: Syl.danger))),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await store.removeFact(widget.entity, widget.fact.id);
+    if (mounted) Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('Edit fact about ${widget.entity.name}', style: Theme.of(context).textTheme.headlineMedium),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _text,
+          autofocus: true,
+          maxLines: 4,
+          minLines: 2,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: const InputDecoration(labelText: 'Fact'),
+        ),
+        const SizedBox(height: 12),
+        Row(children: [
+          SizedBox(
+            width: 120,
+            child: TextField(
+              controller: _chapter,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Chapter'),
+            ),
+          ),
+          const Spacer(),
+          IconButton(
+            tooltip: 'Delete fact',
+            onPressed: _delete,
+            icon: Icon(Icons.delete_outline, color: Syl.danger),
+          ),
+          const SizedBox(width: 4),
+          FilledButton(onPressed: _save, child: const Text('Save')),
+        ]),
+      ]),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Link two entities
 // ---------------------------------------------------------------------------
 
@@ -206,7 +300,11 @@ class _LinkSheetState extends State<_LinkSheet> {
   @override
   Widget build(BuildContext context) {
     final store = context.watch<LibraryStore>();
-    final others = store.entities.where((e) => e.id != widget.source.id).toList();
+    final book = widget.source.book;
+    // Only entries from the same book (all of them if this one has no book).
+    final others = store.entities
+        .where((e) => e.id != widget.source.id && (book == null || sameTitle(e.book, book)))
+        .toList();
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -219,20 +317,31 @@ class _LinkSheetState extends State<_LinkSheet> {
           style: TextStyle(color: Syl.muted),
         ),
         const SizedBox(height: 16),
-        SizedBox(
-          height: 44,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: others.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (_, i) => FilterPill(
-              label: others[i].name,
-              selected: _target?.id == others[i].id,
-              onTap: () => setState(() => _target = others[i]),
+        Text(book == null ? 'Connected to' : 'Connected to · $book', style: const TextStyle(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 8),
+        if (others.isEmpty)
+          Text('Nothing else from this book yet.', style: TextStyle(color: Syl.muted))
+        else
+          // Entries are filled in their type's colour, like everywhere else.
+          SizedBox(
+            height: 48,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: others.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (_, i) => FilterPill(
+                label: others[i].name,
+                dot: Syl.typeDot(others[i].type),
+                background: Syl.typeColor(others[i].type),
+                selected: _target?.id == others[i].id,
+                onTap: () => setState(() => _target = others[i]),
+              ),
             ),
           ),
-        ),
         const SizedBox(height: 16),
+        const Text('Relationship', style: TextStyle(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 8),
+        // Relationships are outlined, not filled, so they never look like an entry.
         Wrap(spacing: 8, runSpacing: 8, children: [
           for (final t in kRelationSuggestions)
             ChoiceChip(
@@ -240,14 +349,25 @@ class _LinkSheetState extends State<_LinkSheet> {
               selected: _type == t,
               onSelected: (_) => setState(() => _type = t),
               showCheckmark: false,
-              selectedColor: Syl.butter,
-              backgroundColor: Syl.white,
-              side: BorderSide.none,
+              selectedColor: Syl.ink,
+              backgroundColor: Colors.transparent,
+              labelStyle: TextStyle(
+                color: _type == t ? Syl.paper : Syl.ink,
+                fontWeight: _type == t ? FontWeight.w700 : FontWeight.w500,
+              ),
+              side: BorderSide(color: _type == t ? Syl.ink : Syl.line, width: 1.5),
               shape: const StadiumBorder(),
             ),
         ]),
         const SizedBox(height: 16),
-        TextField(controller: _desc, decoration: const InputDecoration(labelText: 'Note (optional)')),
+        TextField(
+          controller: _desc,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: InputDecoration(
+            labelText: 'Note (optional)',
+            helperText: 'Also saved as a fact about ${widget.source.name}',
+          ),
+        ),
         const SizedBox(height: 12),
         Row(children: [
           SizedBox(
@@ -263,8 +383,14 @@ class _LinkSheetState extends State<_LinkSheet> {
             onPressed: _target == null
                 ? null
                 : () async {
+                    final chapter = int.tryParse(_chapter.text.trim());
                     await store.addLink(widget.source.id, _target!.id, _type,
-                        description: _desc.text, chapter: int.tryParse(_chapter.text.trim()));
+                        description: _desc.text, chapter: chapter);
+                    // The note is something learned about them, so it's a fact too.
+                    if (_desc.text.trim().isNotEmpty) {
+                      await store.addFact(widget.source, _desc.text,
+                          chapter ?? store.capFor(widget.source) ?? widget.source.discoveryChapter);
+                    }
                     if (context.mounted) Navigator.pop(context);
                   },
             child: const Text('Save link'),

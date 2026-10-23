@@ -112,7 +112,9 @@ class EntityScreen extends StatelessWidget {
                   trailing: PillButton(label: 'Add fact', icon: Icons.add, onTap: () => showQuickAdd(context, entity: e))),
               const SizedBox(height: 10),
               if (facts.isEmpty)
-                const _Hint('No facts yet. Add what you learn as you read, with the chapter.'),
+                const _Hint('No facts yet. Add what you learn as you read, with the chapter.')
+              else
+                const _Hint('Tap a fact to edit it, or swipe it left to delete.'),
               for (final f in facts) _FactRow(entity: e, fact: f),
               if (hidden > 0)
                 _Hint('$hidden more ${hidden == 1 ? 'fact is' : 'facts are'} hidden by the spoiler shield (past chapter $cap).'),
@@ -327,14 +329,23 @@ class _FactRow extends StatelessWidget {
             ) ??
             false,
         onDismissed: (_) => context.read<LibraryStore>().removeFact(entity, fact.id),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(color: Syl.white, borderRadius: Syl.r20),
-          child: Row(children: [
-            ChapterBadge(fact.chapter, color: Syl.pastels[fact.chapter % Syl.pastels.length]),
-            const SizedBox(width: 12),
-            Expanded(child: Text(fact.text, style: const TextStyle(fontSize: 15, height: 1.35))),
-          ]),
+        // Tap to edit; swipe left to delete.
+        child: Material(
+          color: Syl.white,
+          borderRadius: Syl.r20,
+          child: InkWell(
+            borderRadius: Syl.r20,
+            onTap: () => showEditFact(context, entity, fact),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(children: [
+                ChapterBadge(fact.chapter, color: Syl.pastels[fact.chapter % Syl.pastels.length]),
+                const SizedBox(width: 12),
+                Expanded(child: Text(fact.text, style: const TextStyle(fontSize: 15, height: 1.35))),
+                Icon(Icons.edit_outlined, size: 18, color: Syl.muted),
+              ]),
+            ),
+          ),
         ),
       ),
     );
