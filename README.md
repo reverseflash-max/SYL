@@ -26,6 +26,12 @@ On Windows the app uses `C:\Users\V\SYL_Project\data` directly, so the app and C
 
 Set your book and the chapter you've reached (the app's Reading tab, or `python syl.py settings --chapter 7`). Facts and links from later chapters are then hidden in every view and are never sent to the AI.
 
+## Reading log
+
+Each time you move a book's chapter forward, SYL notes the day in that book's `reading_log` (in `data/books.json`). Moving back takes it off again, so an undo leaves nothing behind. **I read today** at the top of the Books tab counts a day even when you didn't finish a chapter. Marking a book finished saves the day you finished it.
+
+From this log, the Books tab shows your streak and this week. One missed day keeps the streak going, but two missed days in a row end it. Tap the card to open the stats page. It shows your goal for the year, the days you read, chapters and books finished by week, month, year or all time, and a calendar with a cover on each day you read. A sync combines the reading logs from the phone and the PC, so a day read on either one counts.
+
 ## AI (LM Studio on your PC)
 
 1. In LM Studio, load a model, open the Developer tab and start the server (port 1234).

@@ -13,6 +13,7 @@ LibraryStore sampleLibrary() {
   EntityMeta meta(String day) => EntityMeta(firstSeen: day, lastUpdated: '${day}T21:40:00');
 
   return LibraryStore.memory(
+    clock: () => DateTime(2026, 10, 23, 20),
     entities: [
       Entity(
         id: 'Q180322',
@@ -98,7 +99,7 @@ LibraryStore sampleLibrary() {
       Relationship(source: 'Q180322', target: 'narsil', type: 'Carries', chapter: 10, createdAt: '2026-10-03T21:51:00'),
       Relationship(source: 'Q177499', target: 'Q180322', type: 'Old friend', chapter: 10, createdAt: '2026-10-04T21:30:00'),
     ],
-    settings: const AppSettings(currentBook: lotr),
+    settings: const AppSettings(currentBook: lotr, readingGoal: 12),
     books: const [
       Book(
         id: 'the-lord-of-the-rings',
@@ -113,9 +114,24 @@ LibraryStore sampleLibrary() {
           'The Council of Elrond', 'The Ring Goes South', 'A Journey in the Dark', 'The Bridge of Khazad-dûm',
           'Lothlórien', 'The Mirror of Galadriel', 'Farewell to Lórien', 'The Great River', 'The Breaking of the Fellowship',
         ],
+        readingLog: [
+          ReadingDay('2026-10-13', chapters: 2), ReadingDay('2026-10-15', chapters: 1), ReadingDay('2026-10-17', chapters: 3),
+          ReadingDay('2026-10-18', chapters: 1), ReadingDay('2026-10-20', chapters: 2), ReadingDay('2026-10-21', marked: true),
+          ReadingDay('2026-10-22', chapters: 1),
+        ],
       ),
-      Book(id: 'mistborn', title: mistborn, author: 'Brandon Sanderson', chapter: 5, totalChapters: 38),
-      Book(id: 'the-hobbit', title: 'The Hobbit', author: 'J. R. R. Tolkien', status: 'finished', rating: 4.5),
+      Book(id: 'mistborn', title: mistborn, author: 'Brandon Sanderson', chapter: 5, totalChapters: 38, readingLog: [
+        ReadingDay('2026-10-16', chapters: 2), ReadingDay('2026-10-19', chapters: 3),
+      ]),
+      Book(
+        id: 'the-hobbit',
+        title: 'The Hobbit',
+        author: 'J. R. R. Tolkien',
+        status: 'finished',
+        rating: 4.5,
+        finishedAt: '2026-10-09',
+        readingLog: [ReadingDay('2026-10-06', chapters: 4), ReadingDay('2026-10-08', chapters: 5), ReadingDay('2026-10-09', chapters: 3)],
+      ),
       Book(id: 'elantris', title: 'Elantris', author: 'Brandon Sanderson', status: 'want'),
     ],
   );

@@ -417,6 +417,12 @@ class Book {
   /// A cover photo you chose, saved in the data folder (e.g. covers/lotr-1712.jpg).
   /// It stays on the device it was chosen on; elsewhere the Open Library cover shows.
   final String? coverFile;
+
+  /// The days you read this book, oldest first (see [ReadingDay]).
+  final List<ReadingDay> readingLog;
+
+  /// The day you marked it finished (YYYY-MM-DD), if you did in this version.
+  final String? finishedAt;
   final String updatedAt;
 
   const Book({
@@ -431,6 +437,8 @@ class Book {
     this.openLibraryKey,
     this.coverId,
     this.coverFile,
+    this.readingLog = const [],
+    this.finishedAt,
     this.updatedAt = '',
   });
 
@@ -458,6 +466,8 @@ class Book {
       openLibraryKey: _pick<String>(j, ['open_library_key']),
       coverId: j['cover_id'] is num ? (j['cover_id'] as num).toInt() : null,
       coverFile: _pick<String>(j, ['cover_file']),
+      readingLog: ReadingDay.listFromJson(j['reading_log']),
+      finishedAt: isDayKey(j['finished_at']) ? j['finished_at'] as String : null,
       updatedAt: _str(j, ['updated_at']),
     );
   }
@@ -475,6 +485,8 @@ class Book {
         'open_library_key': openLibraryKey,
         'cover_id': coverId,
         'cover_file': coverFile,
+        'reading_log': [for (final d in readingLog) d.toJson()],
+        'finished_at': finishedAt,
         'updated_at': updatedAt,
       };
 
@@ -493,6 +505,9 @@ class Book {
     int? coverId,
     String? coverFile,
     bool clearCoverFile = false,
+    List<ReadingDay>? readingLog,
+    String? finishedAt,
+    bool clearFinishedAt = false,
     String? updatedAt,
   }) =>
       Book(
@@ -507,8 +522,61 @@ class Book {
         openLibraryKey: openLibraryKey ?? this.openLibraryKey,
         coverId: coverId ?? this.coverId,
         coverFile: clearCoverFile ? null : (coverFile ?? this.coverFile),
+        readingLog: readingLog ?? this.readingLog,
+        finishedAt: clearFinishedAt ? null : (finishedAt ?? this.finishedAt),
         updatedAt: updatedAt ?? this.updatedAt,
       );
+
+  /// The log entry for [day] (YYYY-MM-DD), if you read this book that day.
+  ReadingDay? readOn(String day) => readingLog.where((d) => d.date == day).firstOrNull;
+}
+
+/// A day as YYYY-MM-DD in local time, the key the reading log uses.
+String dayKey(DateTime d) =>
+    '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+bool isDayKey(Object? v) => v is String && RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(v) && DateTime.tryParse(v) != null;
+
+/// One day you read a book (books.json `reading_log`). [chapters] is how many
+/// chapters you moved on that day; [marked] means you tapped "I read today",
+/// so the day counts even if you didn't finish a chapter.
+class ReadingDay {
+  final String date;
+  final int chapters;
+  final bool marked;
+
+  const ReadingDay(this.date, {this.chapters = 0, this.marked = false});
+
+  /// Every valid entry, one per day (two for one day become one), oldest first.
+  static List<ReadingDay> listFromJson(Object? raw) {
+    final byDate = <String, ReadingDay>{};
+    for (final j in raw is List ? raw : const []) {
+      if (j is! Map || !isDayKey(j['date'])) continue;
+      final d = ReadingDay(
+        j['date'] as String,
+        chapters: j['chapters'] is num ? (j['chapters'] as num).toInt().clamp(0, 9999) : 0,
+        marked: j['marked'] == true,
+      );
+      final had = byDate[d.date];
+      byDate[d.date] = had == null ? d : had.merge(d);
+    }
+    return byDate.values.toList()..sort((a, b) => a.date.compareTo(b.date));
+  }
+
+  /// The same day logged in two places (e.g. phone and PC): the most chapters, marked if either was.
+  ReadingDay merge(ReadingDay o) =>
+      ReadingDay(date, chapters: chapters > o.chapters ? chapters : o.chapters, marked: marked || o.marked);
+
+  ReadingDay copyWith({int? chapters, bool? marked}) =>
+      ReadingDay(date, chapters: chapters ?? this.chapters, marked: marked ?? this.marked);
+
+  Map<String, dynamic> toJson() => {'date': date, 'chapters': chapters, if (marked) 'marked': true};
+
+  @override
+  bool operator ==(Object other) => other is ReadingDay && other.date == date && other.chapters == chapters && other.marked == marked;
+
+  @override
+  int get hashCode => Object.hash(date, chapters, marked);
 }
 
 /// data/deleted.json: what was deleted and when, so a sync with the PC
@@ -562,6 +630,9 @@ class AppSettings {
   /// 'system' (follow the phone), 'light' or 'dark'.
   final String appearance;
 
+  /// How many books you mean to finish this year, if you set a goal.
+  final int? readingGoal;
+
   const AppSettings({
     this.currentBook,
     this.spoilerChapter,
@@ -570,6 +641,7 @@ class AppSettings {
     this.syncUrl = '',
     this.syncCode = '',
     this.appearance = 'system',
+    this.readingGoal,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> j) => AppSettings(
@@ -580,6 +652,7 @@ class AppSettings {
         syncUrl: _str(j, ['sync_url']),
         syncCode: _str(j, ['sync_code']),
         appearance: _str(j, ['appearance'], 'system'),
+        readingGoal: j['reading_goal'] is num && (j['reading_goal'] as num) > 0 ? (j['reading_goal'] as num).toInt() : null,
       );
 
   Map<String, dynamic> toJson() => {
@@ -590,6 +663,7 @@ class AppSettings {
         'sync_url': syncUrl,
         'sync_code': syncCode,
         'appearance': appearance,
+        'reading_goal': readingGoal,
       };
 
   AppSettings copyWith({
@@ -602,6 +676,8 @@ class AppSettings {
     String? syncUrl,
     String? syncCode,
     String? appearance,
+    int? readingGoal,
+    bool clearGoal = false,
   }) =>
       AppSettings(
         currentBook: clearBook ? null : (currentBook ?? this.currentBook),
@@ -611,5 +687,6 @@ class AppSettings {
         syncUrl: syncUrl ?? this.syncUrl,
         syncCode: syncCode ?? this.syncCode,
         appearance: appearance ?? this.appearance,
+        readingGoal: clearGoal ? null : (readingGoal ?? this.readingGoal),
       );
 }

@@ -516,6 +516,42 @@ def parse_rating(value):
     return halves // 2 if halves % 2 == 0 else halves / 2
 
 
+_DAY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def is_day(value: Any) -> bool:
+    """A day as YYYY-MM-DD (the reading log's key)."""
+    if not isinstance(value, str) or not _DAY.match(value):
+        return False
+    try:
+        datetime.strptime(value, "%Y-%m-%d")
+    except ValueError:
+        return False
+    return True
+
+
+def normalize_reading_log(raw: Any) -> list[dict[str, Any]]:
+    """A book's reading_log: one entry per day you read it, oldest first.
+    `chapters` is how many chapters you moved on that day; `marked` means you
+    tapped "I read today" in the app. Two entries for one day become one."""
+    days: dict[str, dict[str, Any]] = {}
+    for d in raw if isinstance(raw, list) else []:
+        if not isinstance(d, dict) or not is_day(d.get("date")):
+            continue
+        ch = d.get("chapters")
+        entry = {"date": d["date"],
+                 "chapters": max(0, int(ch)) if isinstance(ch, (int, float)) and not isinstance(ch, bool) else 0}
+        if d.get("marked") is True:
+            entry["marked"] = True
+        had = days.get(entry["date"])
+        if had:
+            entry["chapters"] = max(entry["chapters"], had["chapters"])
+            if had.get("marked"):
+                entry["marked"] = True
+        days[entry["date"]] = entry
+    return [days[k] for k in sorted(days)]
+
+
 def normalize_book(raw: Any) -> dict[str, Any] | None:
     if not isinstance(raw, dict):
         return None
@@ -538,6 +574,8 @@ def normalize_book(raw: Any) -> dict[str, Any] | None:
         "open_library_key": _get(raw, "open_library_key"),
         "cover_id": int(_get(raw, "cover_id")) if isinstance(_get(raw, "cover_id"), (int, float)) else None,
         "cover_file": _get(raw, "cover_file"),
+        "reading_log": normalize_reading_log(_get(raw, "reading_log")),
+        "finished_at": _get(raw, "finished_at") if is_day(_get(raw, "finished_at")) else None,
         "updated_at": normalize_timestamp(_get(raw, "updated_at")),
     }
 

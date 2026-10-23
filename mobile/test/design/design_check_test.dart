@@ -26,6 +26,7 @@ import 'package:mobile/theme/syl_theme.dart';
 import 'package:mobile/ui/books_screen.dart';
 import 'package:mobile/ui/home_shell.dart';
 import 'package:mobile/ui/new_entity_screen.dart';
+import 'package:mobile/ui/stats_screen.dart';
 import 'package:provider/provider.dart';
 
 import 'sample_library.dart';
@@ -91,10 +92,14 @@ final scenarios = <Scenario>[
   Scenario('11-book-sheet', (t) async {
     await _tapNav(t, Icons.menu_book_outlined);
     // (the title shows twice: on the card and on its placeholder cover)
-    final card = find.text('Mistborn: The Final Empire').first;
-    await t.ensureVisible(card);
+    final card = find.text('Mistborn: The Final Empire');
+    for (var i = 0; i < 10 && card.evaluate().isEmpty; i++) {
+      await t.drag(find.byType(BooksScreen), const Offset(0, -300));
+      await t.pumpAndSettle();
+    }
+    await t.ensureVisible(card.first);
     await t.pumpAndSettle();
-    await t.tap(card);
+    await t.tap(card.first);
     await t.pumpAndSettle();
   }),
   Scenario('12-share-card', (t) async {
@@ -113,6 +118,19 @@ final scenarios = <Scenario>[
     await t.ensureVisible(share);
     await t.pumpAndSettle();
     await t.tap(share);
+    await t.pumpAndSettle();
+  }),
+  Scenario('13-reading-stats', (t) async {
+    await _tapNav(t, Icons.menu_book_outlined);
+    await t.tap(find.byType(ReadingSummaryCard));
+    await t.pumpAndSettle();
+  }),
+  Scenario('14-reading-calendar', (t) async {
+    await _tapNav(t, Icons.menu_book_outlined);
+    await t.tap(find.byType(ReadingSummaryCard));
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text('October 2026'), 300, scrollable: find.byType(Scrollable).first);
+    await t.drag(find.byType(Scrollable).first, const Offset(0, -500));
     await t.pumpAndSettle();
   }),
 ];

@@ -7,6 +7,7 @@ import '../services/open_library_service.dart';
 import '../state/library_store.dart';
 import '../theme/syl_theme.dart';
 import 'share_card.dart';
+import 'stats_screen.dart';
 import 'widgets/common.dart';
 import 'widgets/keyboard.dart';
 import 'widgets/stars.dart';
@@ -38,6 +39,10 @@ class BooksScreen extends StatelessWidget {
           if (store.bookList.isEmpty) ...[
             const SizedBox(height: 28),
             _EmptyShelf(onAdd: () => openNewBook(context)),
+          ],
+          if (store.bookList.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            const ReadingSummaryCard(),
           ],
           if (reading.isNotEmpty) ...[
             _Heading('Reading', reading.length),

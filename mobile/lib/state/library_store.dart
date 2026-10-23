@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../data/storage.dart';
 import '../models/models.dart';
+import '../models/reading_stats.dart';
 import '../services/ai_service.dart';
 import '../services/open_library_service.dart';
 import '../services/sync_service.dart';
@@ -14,7 +15,8 @@ import '../services/wikidata_service.dart';
 /// every change is written straight to disk.
 class LibraryStore extends ChangeNotifier {
   LibraryStore({WikidataService? wikidata, AiService? ai, SyncService? sync, OpenLibraryService? openLibrary})
-      : wikidata = wikidata ?? WikidataService(),
+      : clock = DateTime.now,
+        wikidata = wikidata ?? WikidataService(),
         ai = ai ?? AiService(),
         sync = sync ?? SyncService(),
         openLibrary = openLibrary ?? OpenLibraryService();
@@ -28,7 +30,9 @@ class LibraryStore extends ChangeNotifier {
     SyncService? sync,
     WikidataService? wikidata,
     OpenLibraryService? openLibrary,
-  })  : wikidata = wikidata ?? WikidataService(),
+    DateTime Function()? clock,
+  })  : clock = clock ?? DateTime.now,
+        wikidata = wikidata ?? WikidataService(),
         ai = AiService(),
         sync = sync ?? SyncService(),
         openLibrary = openLibrary ?? OpenLibraryService(),
@@ -41,6 +45,9 @@ class LibraryStore extends ChangeNotifier {
   }
 
   bool _memoryOnly = false;
+
+  /// What "today" is for the reading log (tests set it).
+  DateTime Function() clock;
   final WikidataService wikidata;
   final AiService ai;
   final SyncService sync;
@@ -440,11 +447,13 @@ class LibraryStore extends ChangeNotifier {
   }
 
   /// Saves changes to a book. A new title is carried over to its entries.
+  /// Moving your chapter on (or back) is noted in the book's reading log for
+  /// today, and marking it finished notes the day you finished it.
   Future<void> updateBook(Book b) async {
     final i = _books.indexWhere((x) => x.id == b.id);
     if (i < 0) return;
     final old = _books[i];
-    _books[i] = b.copyWith(updatedAt: nowIso());
+    _books[i] = _logReading(old, b).copyWith(updatedAt: nowIso());
     if (old.title != b.title) {
       for (final e in _entities.where((e) => sameTitle(e.book, old.title)).toList()) {
         await _put(e.copyWith(book: b.title));
@@ -456,6 +465,47 @@ class LibraryStore extends ChangeNotifier {
     }
     await _saveBooks();
   }
+
+  /// [b] with today's reading noted. Only a move from a chapter you'd already
+  /// set counts: setting where you are for the first time isn't reading.
+  /// Going back takes chapters off today again (so an undo leaves no trace).
+  Book _logReading(Book old, Book b) {
+    final today = dayKey(clock());
+    var log = b.readingLog;
+    final moved = old.chapter != null && b.chapter != null ? b.chapter! - old.chapter! : 0;
+    if (moved != 0) {
+      final day = b.readOn(today) ?? ReadingDay(today);
+      final chapters = day.chapters + moved;
+      log = [
+        for (final d in log)
+          if (d.date != today) d,
+        if (chapters > 0 || day.marked) day.copyWith(chapters: chapters < 0 ? 0 : chapters),
+      ]..sort((x, y) => x.date.compareTo(y.date));
+    }
+    if (b.status == 'finished') {
+      return b.copyWith(readingLog: log, finishedAt: old.status == 'finished' ? b.finishedAt : (b.finishedAt ?? today));
+    }
+    return b.copyWith(readingLog: log, clearFinishedAt: true);
+  }
+
+  /// "I read today": today counts for your streak even if you didn't finish a chapter.
+  Future<void> markReadToday(Book b) async {
+    final current = _books.where((x) => x.id == b.id).firstOrNull;
+    if (current == null) return;
+    final today = dayKey(clock());
+    final day = current.readOn(today) ?? ReadingDay(today);
+    await updateBook(current.copyWith(
+      readingLog: [for (final d in current.readingLog) if (d.date != today) d, day.copyWith(marked: true)]
+        ..sort((x, y) => x.date.compareTo(y.date)),
+    ));
+  }
+
+  /// Your reading habit across every book, as of now.
+  ReadingStats get readingStats => ReadingStats(_books, clock());
+
+  /// How many books you mean to finish this year (null clears the goal).
+  Future<void> setReadingGoal(int? books) => updateSettings(
+      books == null || books <= 0 ? _settings.copyWith(clearGoal: true) : _settings.copyWith(readingGoal: books));
 
   /// The photo you chose as [b]'s cover, if it is on this device.
   File? coverFileFor(Book b) => _storage?.coverFile(b.coverFile);
