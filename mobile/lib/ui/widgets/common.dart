@@ -77,16 +77,20 @@ class SoftTag extends StatelessWidget {
 
 /// Pill used for the type filters.
 class FilterPill extends StatelessWidget {
-  const FilterPill({super.key, required this.label, required this.selected, required this.onTap, this.dot});
+  const FilterPill(
+      {super.key, required this.label, required this.selected, required this.onTap, this.dot, this.background});
   final String label;
   final bool selected;
   final VoidCallback onTap;
   final Color? dot;
 
+  /// Fill when not selected (white by default).
+  final Color? background;
+
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? Syl.ink : Syl.white,
+      color: selected ? Syl.ink : (background ?? Syl.white),
       shape: const StadiumBorder(),
       child: InkWell(
         customBorder: const StadiumBorder(),

@@ -101,6 +101,15 @@ class Fact {
         'timestamp': timestamp,
         'source': source,
       };
+
+  /// The same fact (same id, so a sync keeps the edit) with new words or chapter.
+  Fact copyWith({String? text, int? chapter}) => Fact(
+        id: id,
+        text: text?.trim() ?? this.text,
+        chapter: chapter ?? this.chapter,
+        timestamp: timestamp,
+        source: source,
+      );
 }
 
 class Lore {
