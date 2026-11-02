@@ -13,3 +13,11 @@ __pycache__/
 
 # Flutter generated
 mobile/**/flutter/ephemeral/
+
+# Video Shrinker build output
+tools/video_shrinker/build/
+tools/video_shrinker/dist/
+tools/video_shrinker/*.spec
+tools/video_shrinker/*.exe
+tools/video_shrinker/*.zip
+tools/video_shrinker/ffmpeg-src/
